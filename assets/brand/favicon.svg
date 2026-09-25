@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-60 -60 1120 1120">
+    <defs>
+      <linearGradient id="fl" gradientUnits="userSpaceOnUse" x1="150" y1="50" x2="850" y2="950">
+        <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#9fd0ff"/>
+      </linearGradient>
+      <radialGradient id="fb" gradientUnits="userSpaceOnUse" cx="500" cy="420" r="800">
+        <stop offset="0" stop-color="#18202c"/><stop offset="1" stop-color="#06080b"/>
+      </radialGradient>
+    </defs>
+    <rect x="-60" y="-60" width="1120" height="1120" rx="246.4" fill="url(#fb)"/>
+    <g fill="none" stroke="url(#fl)" stroke-linejoin="miter" stroke-width="26">
+      <path d="M500 30L564.29 344.79L724.86 275.14L655.21 435.71L970 500L655.21 564.29L724.86 724.86L564.29 655.21L500 970L435.71 655.21L275.14 724.86L344.79 564.29L30 500L344.79 435.71L275.14 275.14L435.71 344.79Z"/>
+      <path d="M545.16 390.98L609.02 454.84L609.02 545.16L545.16 609.02L454.84 609.02L390.98 545.16L390.98 454.84L454.84 390.98Z" stroke-width="20.8"/>
+      <path d="M500 30L500 390.98" stroke-width="14.3"/><path d="M724.86 275.14L577.09 422.91" stroke-width="14.3"/><path d="M970 500L609.02 500" stroke-width="14.3"/><path d="M724.86 724.86L577.09 577.09" stroke-width="14.3"/><path d="M500 970L500 609.02" stroke-width="14.3"/><path d="M275.14 724.86L422.91 577.09" stroke-width="14.3"/><path d="M30 500L390.98 500" stroke-width="14.3"/><path d="M275.14 275.14L422.91 422.91" stroke-width="14.3"/>
+    </g>
+  </svg>

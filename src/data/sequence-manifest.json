@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-09-17T12:11:52.694Z",
+  "crop": {
+    "left": 420,
+    "top": 440,
+    "size": 1440
+  },
+  "contrast": 1.5,
+  "tiers": {
+    "scroll": {
+      "frames": 351,
+      "width": 1440,
+      "step": 2
+    },
+    "scroll-mobile": {
+      "frames": 351,
+      "width": 720,
+      "step": 2
+    },
+    "rotate": {
+      "frames": 167,
+      "width": 1440,
+      "step": 2,
+      "source": "wire-360"
+    },
+    "rotate-mobile": {
+      "frames": 167,
+      "width": 720,
+      "step": 2
+    }
+  }
+}

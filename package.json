@@ -1,0 +1,48 @@
+{
+  "name": "imperial-star-gems",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "sequence:convert": "node scripts/convert-sequence.mjs",
+    "jewelry:scrape": "node scripts/scrape-jewelry.mjs",
+    "prebuild": "node scripts/copy-flags.mjs",
+    "flags:copy": "node scripts/copy-flags.mjs"
+  },
+  "dependencies": {
+    "@maxmind/geoip2-node": "^7.1.0",
+    "@react-three/drei": "10.7.8",
+    "@react-three/fiber": "9.7.0",
+    "@vercel/analytics": "2.0.1",
+    "@vercel/functions": "^3.9.8",
+    "@vercel/speed-insights": "2.0.0",
+    "flag-icons": "^7.5.0",
+    "framer-motion": "13.2.0",
+    "gsap": "3.15.0",
+    "i18n-iso-countries": "^7.14.0",
+    "mongodb": "^7.6.0",
+    "next": "16.3.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "three": "0.186.0"
+  },
+  "overrides": {
+    "@react-three/fiber": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "22.20.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.186.0",
+    "sharp": "0.35.4",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3"
+  }
+}

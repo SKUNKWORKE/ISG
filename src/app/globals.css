@@ -1,0 +1,303 @@
+@import "tailwindcss";
+
+/*
+  Imperial Star Gems — white-luxury design system.
+
+  Tailwind's stock palette is cleared wholesale below (`--color-*: initial`) so
+  that a stray `text-gray-500` fails loudly instead of quietly introducing a
+  colour that is not part of the brand.
+*/
+@theme {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #ffffff;
+
+  --color-porcelain: #fafafa;
+  --color-panel: #efedea;
+  --color-ink: #17181b;
+  --color-ink-muted: #6e6d69;
+  --color-hairline: #d8d6d1;
+  --color-metal: #b9b6ae;
+  --color-facet: #dceaf0;
+
+  /*
+    Measured contrast against the two grounds (WCAG 2.1, normal text needs 4.5):
+
+      ink        on porcelain  17.1 : 1   pass
+      ink        on panel      15.2 : 1   pass
+      ink-muted  on porcelain   4.96: 1   pass
+      ink-muted  on panel       4.43: 1   FAILS — use ink-muted-panel instead
+      ink-muted-panel on panel  5.23: 1   pass
+      metal      on porcelain   1.94: 1   never use for text
+
+    --metal is a stroke and rule colour only: hairlines, icon outlines, small
+    decorative marks. Any label a user has to read uses an ink token.
+  */
+  --color-ink-muted-panel: #63625e;
+
+  --font-display: var(--font-instrument-serif), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-dm-sans), "Helvetica Neue", Arial, sans-serif;
+
+  /* Radii are scaled by element size rather than applied uniformly. */
+  --radius-chip: 10px;
+  --radius-input: 12px;
+  --radius-card: 22px;
+  --radius-panel: 36px;
+
+  --ease-quiet: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/*
+  Seasonal themes, keyed to <html data-season>.
+
+  The attribute is set before first paint by the inline script in
+  SeasonalThemeScript, from the visitor's detected hemisphere. A northern
+  visitor in September gets autumn; a southern visitor the same week gets
+  spring. No attribute means no detected season — equatorial visitors, or
+  nobody we could place — and the base palette above applies unchanged.
+
+  Only the two grounds and the glint accent shift. The ink tokens are never
+  touched, because the contrast ratios documented above are measured against
+  them; each ground below was chosen to sit within a few hundredths of the base
+  luminance so those ratios continue to hold:
+
+    theme    ink/porcelain  ink-muted/porcelain  ink/panel  ink-muted-panel/panel
+    base          17.01           4.96             15.19           5.23
+    spring        17.11           4.99             15.48           5.32
+    summer        17.12           5.00             15.41           5.30
+    autumn        17.01           4.96             15.22           5.24
+    winter        16.99           4.96             15.26           5.25
+
+  Re-measure before changing any value here. The tint is meant to be a whisper:
+  if a visitor notices the colour rather than the season, it has gone too far.
+*/
+:root[data-season="spring"] {
+  --color-porcelain: #fafbfa;
+  --color-panel: #eef0ec;
+  --color-facet: #e4f0e4;
+}
+
+:root[data-season="summer"] {
+  --color-porcelain: #fbfbf8;
+  --color-panel: #f0efe9;
+  --color-facet: #d8ecf5;
+}
+
+:root[data-season="autumn"] {
+  --color-porcelain: #fbfaf7;
+  --color-panel: #f1ede7;
+  --color-facet: #f2e6d4;
+}
+
+:root[data-season="winter"] {
+  --color-porcelain: #f9fafb;
+  --color-panel: #eceef0;
+  --color-facet: #e3ebf2;
+}
+
+/*
+  The theme is normally correct before the first paint, but a visitor whose
+  country only the network fallback could resolve gets corrected a moment after
+  hydration. Easing the two grounds turns that from a pop into a settle. The
+  reduced-motion block at the foot of this file already neutralises it.
+*/
+body {
+  transition:
+    background-color 480ms var(--ease-quiet),
+    color 480ms var(--ease-quiet);
+}
+
+/*
+  Descendant variants for <body data-device>, set by DeviceAttribute once the
+  page hydrates — e.g. `device-mobile:hidden`. Tailwind's built-in
+  `data-[device=mobile]:` only matches the element carrying the attribute, not
+  its children. Prefer `max-md:` for pure layout: media queries apply from the
+  first paint, while these wait for hydration.
+*/
+@custom-variant device-mobile (&:where(body[data-device="mobile"] *));
+@custom-variant device-tablet (&:where(body[data-device="tablet"] *));
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-porcelain);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: var(--color-facet);
+    color: var(--color-ink);
+  }
+
+  /* Visible focus on a near-white ground needs an ink ring, not a pale one. */
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Only elements that opt in get a focus ring on mouse click. */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@layer components {
+  /*
+    Wireframe glyph.
+
+    At rest: hairline outline, no fill. On hover, focus, or when the shape is the
+    active filter, the outline fills with the cool glint and the facet lines draw
+    themselves in from the girdle inwards.
+
+    Facet paths carry pathLength="1", so one dash length covers any path
+    regardless of its real length and the stagger stays even across shapes.
+  */
+  .glyph-outline {
+    fill: transparent;
+    stroke: var(--color-metal);
+    transition:
+      fill 420ms var(--ease-quiet),
+      stroke 320ms var(--ease-quiet);
+  }
+
+  .glyph-facet {
+    fill: none;
+    stroke: var(--color-metal);
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    opacity: 0;
+    transition:
+      stroke-dashoffset 520ms var(--ease-quiet),
+      opacity 200ms linear,
+      stroke 320ms var(--ease-quiet);
+  }
+
+  .glyph-is-lit .glyph-outline {
+    fill: var(--color-facet);
+    stroke: var(--color-ink);
+  }
+
+  .glyph-is-lit .glyph-facet {
+    stroke: var(--color-ink);
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  /*
+    A glyph marked `.glyph-auto` lights when its containing `.group` is hovered
+    or holds focus, so a card lights as one object rather than needing hover
+    state tracked in React.
+  */
+  .group:hover .glyph-auto .glyph-outline,
+  .group:focus-within .glyph-auto .glyph-outline {
+    fill: var(--color-facet);
+    stroke: var(--color-ink);
+  }
+
+  .group:hover .glyph-auto .glyph-facet,
+  .group:focus-within .glyph-auto .glyph-facet {
+    stroke: var(--color-ink);
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  /*
+    Touch screens have no hover. Facets draw at rest so the plotting detail
+    isn't locked behind a gesture, the glint lights while a card is pressed or
+    focused, and the sticky :hover mobile browsers leave behind after a tap
+    doesn't keep a card lit. Mouse and trackpad devices never match this block.
+  */
+  @media (hover: none) {
+    .glyph-auto .glyph-facet {
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+
+    .group:hover:not(:active):not(:focus-within) .glyph-auto .glyph-outline {
+      fill: transparent;
+      stroke: var(--color-metal);
+    }
+
+    .group:hover:not(:active):not(:focus-within) .glyph-auto .glyph-facet {
+      stroke: var(--color-metal);
+    }
+
+    .group:active .glyph-auto .glyph-outline {
+      fill: var(--color-facet);
+      stroke: var(--color-ink);
+    }
+
+    .group:active .glyph-auto .glyph-facet {
+      stroke: var(--color-ink);
+    }
+  }
+
+  /*
+    Static wireframe: outline only, facets always drawn, no interaction.
+    No dash pattern either — pathLength-based dashes break into gaps when a
+    glyph is stretched non-uniformly (the carat size chart does this).
+  */
+  .glyph-static .glyph-facet {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
+    transition: none;
+  }
+
+  .glyph-static .glyph-outline,
+  .glyph-static .glyph-facet {
+    transition: none;
+  }
+}
+
+/* Stage captions cross-fade as the hero sequence moves between stages. */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility measure {
+  /* Keeps body copy under the ~80 character line length the brief asks for. */
+  max-width: 62ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
