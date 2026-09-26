@@ -251,9 +251,43 @@ somewhere; without it the route accepts and logs a warning.
 > serverless instances. Put a real limiter or a WAF rule in front of it before
 > launch.
 
-SKUs are the supplier's own references (`TP-280626-3329` lab-grown, `OM-1026`
-natural). Stock lives in `src/lib/real-stones.ts` (lab-grown) and
-`src/lib/real-natural-stones.ts` (natural).
+---
+
+## Stock
+
+SKUs are the supplier's own references (`TP-280626-3329`, `SSD228811`
+lab-grown; `OM-1026` natural). Stock comes from two places:
+
+| Source | Contents |
+|---|---|
+| [`src/lib/real-stones.ts`](src/lib/real-stones.ts), [`real-natural-stones.ts`](src/lib/real-natural-stones.ts) | The first stock lists, kept by hand |
+| `src/data/stones/<prefix>.json` | Supplier workbooks, one file per supplier, loaded by [`supplier-stones.ts`](src/lib/supplier-stones.ts) |
+
+To load a supplier's new list:
+
+```bash
+pip install openpyxl
+python3 scripts/import-stones.py path/to/SSD_All_Stones.xlsx
+```
+
+The script replaces that supplier's JSON file outright. **IGI stones are listed
+as lab-grown and GIA stones as natural**, except where the workbook itself says
+a stone was grown (CVD, HPHT growth, "man-made"): GIA grades grown diamonds too.
+Rows from any other lab or with no certificate, rows missing a grade the
+catalogue needs, and stones already listed are left out, and the script
+prints how many and why. A blank fluorescence is kept and simply not shown.
+Report numbers, prices and locations are never copied; the workbook remains the
+lookup from SKU to report.
+
+**At this size nothing ships whole to the browser.** The stock module is
+`server-only`; client code imports types and grade lists from
+[`stone-vocabulary.ts`](src/lib/stone-vocabulary.ts). The catalogue pages render
+their first twelve results on the server, and every filter change after that
+asks `GET /api/stones` for one page of results plus the filter counts
+([`catalog-search.ts`](src/lib/catalog-search.ts)). Stone pages are built on
+their first visit rather than at build time, stone URLs have their own sitemaps
+(`/stones/sitemap/<n>.xml`, listed in `robots.txt`), and a catalogue spec sheet
+lists at most the first 1,000 matching stones.
 
 ---
 
@@ -308,11 +342,9 @@ on the way in, in the URL, and again server-side.
   showing a partial turn. See *The 360° frames are a stand-in* above.
 - **Contact details** — email, phone and WhatsApp are hard-coded in
   [`src/lib/contact.ts`](src/lib/contact.ts). Confirm they are current.
-- **Inventory.** The 121 stones in [`src/lib/stones.ts`](src/lib/stones.ts) are
-  generated from a seeded PRNG, not real stock. Replace `buildCatalog` with the
-  live feed and delete `INVENTORY_NOTICE` and its two usages.
-- **Certificate numbers** are deliberately not generated; wire real report
-  numbers in with the real inventory.
+- **Inventory** is a set of static supplier lists (see *Stock* above), so
+  availability lags the trade desk until a live feed replaces them; delete
+  `INVENTORY_NOTICE` and its usages when one does.
 - **Sourcing and ethics copy** on `/craftsmanship` states standard trade
   positions. Confirm each is true of the business before publishing.
 - **`metadataBase`** in `src/app/layout.tsx`, plus the domain in `sitemap.ts` and
@@ -336,11 +368,13 @@ on the way in, in the URL, and again server-side.
 assets/sequence/raw-700/      700-frame source PNGs, gitignored
 assets/sequence/raw-360/      333-frame turntable PNGs, gitignored — to be supplied
 scripts/convert-sequence.mjs  PNG -> WebP tiers + manifest
+scripts/import-stones.py      Supplier stock workbooks -> src/data/stones/*.json
 public/sequence/              scroll/, scroll-mobile/, rotate/
 src/app/                      Routes: home, two catalogues, shapes, craftsmanship, contact
 src/app/api/enquiry/          Enquiry endpoint
 src/app/api/ring-builds/      Saves a ring configuration, returns its short code
+src/app/api/stones/           One page of catalogue results for the browser
 src/components/               Hero sequence, rotation loop, catalogue, glyphs, drawer, form
 src/lib/                      Shapes, glyph geometry, stones, sequence, contact helpers
-src/data/                     Generated frame manifest
+src/data/                     Generated frame manifest, jewelry and supplier stone lists
 ```

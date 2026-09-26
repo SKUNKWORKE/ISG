@@ -15,8 +15,8 @@ import type { Stone } from "./stones";
  * under "radiant", which is the same outline.
  *
  * `color` holds the report's fancy-colour wording, or a GIA letter range
- * ("W-X", "Y-Z") for stones below the D–J scale this catalogue filters on;
- * `isColorGrade()` treats both as non-D–J, so they sit under "Fancy".
+ * ("W-X", "Y-Z") for stones below the D–J range; the catalogue files letter
+ * grades below J under "K–Z" (`isLowerColor()`) and the rest under "Fancy".
  */
 export const REAL_NATURAL_STONES: Stone[] = [
   {

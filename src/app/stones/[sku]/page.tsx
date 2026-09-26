@@ -7,7 +7,7 @@ import { ShortlistToggle } from "@/components/shortlist-toggle";
 import { JsonLd } from "@/components/json-ld";
 import { breadcrumbs } from "@/lib/structured-data";
 import { SHAPE_BY_SLUG } from "@/lib/shapes";
-import { ALL_STONES, findStone, type Stone } from "@/lib/stones";
+import { FEATURED_STONES, findStone, type Stone } from "@/lib/stones";
 import { SITE_URL as BASE, originWord, stoneSpecs } from "@/lib/stone-specs";
 
 type Props = { params: Promise<{ sku: string }> };
@@ -22,8 +22,14 @@ function titleFor(stone: Stone) {
   return `${stone.shapeName} ${stone.carat.toFixed(2)} ct ${originWord(stone)} diamond, ${stone.color}, ${stone.clarity}`;
 }
 
+/**
+ * Only the home page's featured stones are built ahead. The rest — tens of
+ * thousands — render on their first visit and are cached from then on;
+ * building them all would take hours and gigabytes for pages most visitors
+ * never open.
+ */
 export function generateStaticParams() {
-  return ALL_STONES.map((stone) => ({ sku: stone.sku }));
+  return FEATURED_STONES.map((stone) => ({ sku: stone.sku }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

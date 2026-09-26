@@ -10,11 +10,11 @@ import { filterParams, type StoneFilter } from "./types";
  * after the click — if `filtersFromParams` rejects a value, it is rejected here
  * too.
  *
- * It matters because the two catalogues hold very different stock. Natural
- * inventory here is entirely fancy-colour and warm-tinted, with no D-J whites
- * and no rounds at all, so a colourless brief that returns hundreds of
- * lab-grown stones can return none at all in natural. The pages use these
- * counts to avoid sending anyone to an empty list.
+ * It matters because the two catalogues hold very different stock — natural
+ * runs to several thousand whites, lab-grown to tens of thousands of stones
+ * and far more fancy colour — so a brief that returns hundreds of stones in
+ * one can return few or none in the other. The pages use these counts to
+ * avoid sending anyone to an empty list.
  */
 
 const BOUNDS = {

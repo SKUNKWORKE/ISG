@@ -3,6 +3,7 @@ import { Catalog } from "@/components/catalog";
 import { JsonLd } from "@/components/json-ld";
 import { breadcrumbs, collectionPage } from "@/lib/structured-data";
 import { toQueryString } from "@/lib/catalog-filter";
+import { catalogSummary, searchCatalog } from "@/lib/catalog-search";
 import { INVENTORY_NOTICE, LAB_STONES } from "@/lib/stones";
 
 const DESCRIPTION =
@@ -38,6 +39,7 @@ export default async function LabGrownDiamondsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const initialQuery = toQueryString(await searchParams);
+  const firstPage = searchCatalog("lab", new URLSearchParams(initialQuery));
 
   const jsonLd = [
     collectionPage({
@@ -86,8 +88,9 @@ export default async function LabGrownDiamondsPage({
 
       <section className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 sm:py-16">
         <Catalog
-          stones={LAB_STONES}
           origin="lab"
+          summary={catalogSummary("lab")}
+          firstPage={firstPage}
           initialQuery={initialQuery}
           notice={INVENTORY_NOTICE}
         />

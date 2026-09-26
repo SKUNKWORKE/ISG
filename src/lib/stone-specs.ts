@@ -16,7 +16,7 @@ export function stoneSpecs(stone: Stone): [string, string][] {
     ...(stone.cut ? ([["Cut", stone.cut]] as [string, string][]) : []),
     ["Polish", stone.polish],
     ["Symmetry", stone.symmetry],
-    ["Fluorescence", stone.fluorescence],
+    ...(stone.fluorescence ? ([["Fluorescence", stone.fluorescence]] as [string, string][]) : []),
     ["Table", `${stone.tablePercent}%`],
     ["Depth", `${stone.depthPercent}%`],
     ["Measurements", stone.measurements],

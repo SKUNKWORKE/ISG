@@ -3,6 +3,7 @@ import { Catalog } from "@/components/catalog";
 import { JsonLd } from "@/components/json-ld";
 import { breadcrumbs, collectionPage } from "@/lib/structured-data";
 import { toQueryString } from "@/lib/catalog-filter";
+import { catalogSummary, searchCatalog } from "@/lib/catalog-search";
 import { INVENTORY_NOTICE, NATURAL_STONES } from "@/lib/stones";
 
 const DESCRIPTION =
@@ -19,6 +20,7 @@ export default async function NaturalDiamondsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const initialQuery = toQueryString(await searchParams);
+  const firstPage = searchCatalog("natural", new URLSearchParams(initialQuery));
 
   const jsonLd = [
     collectionPage({
@@ -52,8 +54,9 @@ export default async function NaturalDiamondsPage({
 
       <section className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 sm:py-16">
         <Catalog
-          stones={NATURAL_STONES}
           origin="natural"
+          summary={catalogSummary("natural")}
+          firstPage={firstPage}
           initialQuery={initialQuery}
           notice={INVENTORY_NOTICE}
         />

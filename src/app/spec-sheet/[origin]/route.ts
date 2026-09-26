@@ -1,4 +1,5 @@
-import { describeFilters, filterStones, filtersFromParams, stoneBounds } from "@/lib/catalog-filter";
+import { describeFilters, filterStones, filtersFromParams } from "@/lib/catalog-filter";
+import { catalogSummary } from "@/lib/catalog-search";
 import {
   describeJewelryFilters,
   filterJewelry,
@@ -35,7 +36,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orig
   if (!origin) return new Response("Not found", { status: 404 });
 
   const all = stonesFor(origin);
-  const bounds = stoneBounds(all);
+  const { bounds } = catalogSummary(origin);
   const { filters, sort } = filtersFromParams(search, bounds);
 
   const pdf = renderCatalogueSheet({

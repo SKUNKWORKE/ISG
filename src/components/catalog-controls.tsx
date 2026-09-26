@@ -238,7 +238,7 @@ export function SearchBox({
 }) {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
-  // Debounced so a 2,000-stone list isn't refiltered on every keystroke.
+  // Debounced so the catalogue is searched once per pause, not once per keystroke.
   useEffect(() => {
     if (draft === value) return;
     const id = setTimeout(() => onChange(draft), 200);
