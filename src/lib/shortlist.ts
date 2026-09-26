@@ -22,7 +22,7 @@ export const SHORTLIST_LIMIT = 4;
  * whether they matter depends on the stone, as the guides say.
  */
 
-const COLOR_SCALE = ["D", "E", "F", "G", "H", "I", "J"];
+const COLOR_SCALE = "DEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const CLARITY_SCALE = ["FL", "IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1", "I2", "I3"];
 const FINISH_SCALE = ["Ideal", "Excellent", "Very Good", "Good", "Fair", "Poor"];
 
@@ -84,7 +84,7 @@ export const COMPARE_ROWS: CompareRow[] = [
     rank: (s) => finishRank(s.symmetry),
     bestLabel: "Best symmetry",
   },
-  { label: "Fluorescence", value: (s) => s.fluorescence },
+  { label: "Fluorescence", value: (s) => s.fluorescence ?? "Not stated" },
   { label: "Table", value: (s) => `${s.tablePercent}%` },
   { label: "Depth", value: (s) => `${s.depthPercent}%` },
   { label: "Measurements", value: (s) => s.measurements },
@@ -111,7 +111,7 @@ export function compareStones(stones: ShortlistStone[]): RowResult[] {
       const ranks = stones.map(row.rank);
       const ranked = ranks.filter((r): r is number => r !== undefined);
       // A "best" needs at least two comparable stones that don't all tie.
-      // Fancy colours, for instance, sit outside D–J and can't be ranked against it.
+      // Fancy colours, for instance, sit outside D–Z and can't be ranked against it.
       if (ranked.length >= 2) {
         const top = Math.min(...ranked);
         if (ranked.some((r) => r !== top)) best = ranks.map((r) => r === top);

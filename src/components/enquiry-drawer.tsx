@@ -33,7 +33,7 @@ export function EnquiryDrawer({ stone, onClose }: { stone: Stone | null; onClose
             {stone.cut ? <Row label="Cut" value={stone.cut} /> : null}
             <Row label="Polish" value={stone.polish} />
             <Row label="Symmetry" value={stone.symmetry} />
-            <Row label="Fluorescence" value={stone.fluorescence} />
+            {stone.fluorescence ? <Row label="Fluorescence" value={stone.fluorescence} /> : null}
             <Row label="Table" value={`${stone.tablePercent}%`} />
             <Row label="Depth" value={`${stone.depthPercent}%`} />
             <Row label="Measurements" value={stone.measurements} wide />

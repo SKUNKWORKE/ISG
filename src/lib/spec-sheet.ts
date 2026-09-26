@@ -49,6 +49,7 @@ const FLUOR_ABBR: Record<Fluorescence, string> = {
   Slight: "SLT",
   Medium: "MED",
   Strong: "STG",
+  "Very Strong": "VST",
 };
 
 function preparedLine(date: Date) {
@@ -75,12 +76,19 @@ const COLUMNS: Column<Stone>[] = [
   { label: "Cut", width: 30, value: (s) => (s.cut ? CUT_ABBR[s.cut] : "–") },
   { label: "Pol", width: 30, value: (s) => CUT_ABBR[s.polish] },
   { label: "Sym", width: 30, value: (s) => CUT_ABBR[s.symmetry] },
-  { label: "Fluor", width: 34, value: (s) => FLUOR_ABBR[s.fluorescence] },
+  { label: "Fluor", width: 34, value: (s) => (s.fluorescence ? FLUOR_ABBR[s.fluorescence] : "–") },
   { label: "Lab", width: 30, value: (s) => s.lab },
   { label: "Measurements (mm)", width: 128, value: (s) => s.measurements.replace(/\s*mm$/, "") },
   { label: "Table", width: 34, align: "right", value: (s) => `${s.tablePercent}%` },
   { label: "Depth", width: 36, align: "right", value: (s) => `${s.depthPercent}%` },
 ];
+
+/**
+ * A sheet is for reading, not a stock dump: an unfiltered lab-grown list runs
+ * to tens of thousands of stones. Past this many, the sheet lists the first
+ * ones in the chosen order and says how many it left out.
+ */
+export const SHEET_STONE_LIMIT = 1000;
 
 export function renderCatalogueSheet({
   stones,
@@ -95,14 +103,15 @@ export function renderCatalogueSheet({
 }): Buffer {
   const originName = origin === "natural" ? "Natural" : "Lab-grown";
   return renderTableSheet({
-    rows: stones,
+    rows: stones.slice(0, SHEET_STONE_LIMIT),
+    total: stones.length,
     columns: COLUMNS,
     heading: `${originName} diamonds`,
     noun: ["stone", "stones"],
     empty: "No stones match these filters. We also source to order — tell us the specification.",
     legend: [
       "Cut / Pol / Sym: ID Ideal, EX Excellent, VG Very Good, G Good, F Fair. Cut is graded on round brilliants only.",
-      "Fluor: NON None, FNT Faint, VSL Very Slight, SLT Slight, MED Medium, STG Strong. Each row links to the stone online.",
+      "Fluor: NON None, FNT Faint, VSL Very Slight, SLT Slight, MED Medium, STG Strong, VST Very Strong. Each row links to the stone online.",
     ],
     url: stoneUrl,
     summary,
@@ -151,6 +160,7 @@ export function renderJewelryCatalogueSheet({
 
 function renderTableSheet<T>({
   rows: all,
+  total = all.length,
   columns,
   heading,
   noun,
@@ -161,6 +171,8 @@ function renderTableSheet<T>({
   preparedAt,
 }: {
   rows: T[];
+  /** When `rows` is a cut-down list, how many there were in full. */
+  total?: number;
   columns: Column<T>[];
   heading: string;
   noun: [singular: string, plural: string];
@@ -180,7 +192,10 @@ function renderTableSheet<T>({
 
   const doc = new PdfDocument(W, H);
   const pageCount = Math.max(1, Math.ceil(all.length / ROWS_PER_PAGE));
-  const count = `${all.length} ${all.length === 1 ? noun[0] : noun[1]}`;
+  const count =
+    all.length < total
+      ? `First ${all.length.toLocaleString("en-GB")} of ${total.toLocaleString("en-GB")} ${noun[1]}`
+      : `${all.length} ${all.length === 1 ? noun[0] : noun[1]}`;
 
   for (let p = 0; p < pageCount; p++) {
     doc.addPage();

@@ -7,13 +7,14 @@ import {
   LABS,
   addedKey,
   isColorGrade,
+  isLowerColor,
   type ClarityGrade,
   type ColorGrade,
   type CutGrade,
   type Fluorescence,
   type Lab,
   type Stone,
-} from "./stones";
+} from "./stone-vocabulary";
 
 /**
  * Filtering lives here, not in the catalogue component, so the downloadable
@@ -21,6 +22,8 @@ import {
  */
 
 export const FANCY = "Fancy";
+/** Colour-filter value for letter grades below J — K through Z, shown as "K–Z". */
+export const LOWER_COLORS = "K-Z";
 
 /** Base hues a fancy-colour description is filed under ("Fancy Intense Brownish Pink" → Pink). */
 export const FANCY_HUES = ["Yellow", "Pink", "Blue", "Green", "Orange", "Brown", "Purple"] as const;
@@ -63,7 +66,7 @@ export type Bounds = Record<RangeKey, Range>;
 export type Filters = {
   query: string;
   shapes: ShapeSlug[];
-  colors: (ColorGrade | typeof FANCY)[];
+  colors: (ColorGrade | typeof LOWER_COLORS | typeof FANCY)[];
   hues: FancyHue[];
   clarities: ClarityGrade[];
   cuts: CutGrade[];
@@ -81,13 +84,19 @@ export type ListKey = {
 /* ------------------------------------------------------------ stone values */
 
 export function fancyHue(stone: Pick<Stone, "color">): FancyHue | undefined {
-  if (isColorGrade(stone.color)) return undefined;
+  if (isColorGrade(stone.color) || isLowerColor(stone.color)) return undefined;
   const words = stone.color.split(/[\s-]+/);
   for (let i = words.length - 1; i >= 0; i--) {
     const hue = FANCY_HUES.find((h) => h === words[i]);
     if (hue) return hue;
   }
   return undefined;
+}
+
+/** Where a stone files under the colour filter: its D–J grade, K–Z, or Fancy. */
+export function colorBucket(stone: Pick<Stone, "color">): Filters["colors"][number] {
+  if (isColorGrade(stone.color)) return stone.color;
+  return isLowerColor(stone.color) ? LOWER_COLORS : FANCY;
 }
 
 /** Longer side over shorter, from "6.48 x 6.51 x 4.01 mm"; NaN when the text won't parse. */
@@ -110,6 +119,10 @@ const rank = (list: readonly string[], value: string | undefined) => {
   return i === -1 ? list.length : i;
 };
 const colorRank = (s: Stone) => rank(COLOR_GRADES, s.color);
+/** D to Z by letter ("W-X" by its first), fancy colours after. */
+const LETTER_SCALE = "DEFGHIJKLMNOPQRSTUVWXYZ";
+const colorScaleRank = (s: Stone) =>
+  isColorGrade(s.color) || isLowerColor(s.color) ? LETTER_SCALE.indexOf(s.color[0]) : LETTER_SCALE.length;
 const clarityRank = (s: Stone) => rank(CLARITY_GRADES, s.clarity);
 /** Cut where graded, then polish and symmetry; a missing cut grade costs nothing. */
 const finishRank = (s: Stone) =>
@@ -123,9 +136,18 @@ function roundOut([lo, hi]: Range, step: number): Range {
 
 /** Bounds of each numeric filter for a set, rounded outwards to clean input stops. */
 export function stoneBounds(stones: Stone[]): Bounds {
+  // A loop rather than Math.min(...values): spreading tens of thousands of
+  // arguments can overflow the call stack.
   const extent = (key: RangeKey): Range => {
-    const values = stones.map((s) => rangeValue(s, key)).filter(Number.isFinite);
-    return values.length ? [Math.min(...values), Math.max(...values)] : [0, 0];
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const s of stones) {
+      const value = rangeValue(s, key);
+      if (!Number.isFinite(value)) continue;
+      if (value < lo) lo = value;
+      if (value > hi) hi = value;
+    }
+    return lo <= hi ? [lo, hi] : [0, 0];
   };
   return {
     carat: roundOut(extent("carat"), 0.1),
@@ -165,23 +187,23 @@ function matchesQuery(stone: Stone, query: string) {
   return terms.every((t) => hay.includes(t));
 }
 
-/** `skip` leaves one facet out, so its option counts reflect everything else that's selected. */
-function matches(stone: Stone, filters: Filters, bounds: Bounds, skip?: ListKey) {
-  const has = <K extends ListKey>(key: K, value: Filters[K][number] | undefined) =>
-    key === skip ||
-    !filters[key].length ||
-    (value !== undefined && (filters[key] as readonly string[]).includes(value));
+const FACET_VALUE: { [K in ListKey]: (s: Stone) => string | undefined } = {
+  shapes: (s) => s.shape,
+  colors: colorBucket,
+  hues: fancyHue,
+  clarities: (s) => s.clarity,
+  cuts: (s) => s.cut,
+  polishes: (s) => s.polish,
+  symmetries: (s) => s.symmetry,
+  fluorescences: (s) => s.fluorescence,
+  labs: (s) => s.lab,
+};
 
+const LIST_KEYS = Object.keys(FACET_VALUE) as ListKey[];
+
+/** Search text and numeric ranges: the constraints no facet count ever leaves out. */
+function matchesFixed(stone: Stone, filters: Filters, bounds: Bounds) {
   if (!matchesQuery(stone, filters.query)) return false;
-  if (!has("shapes", stone.shape)) return false;
-  if (!has("colors", isColorGrade(stone.color) ? stone.color : FANCY)) return false;
-  if (!has("hues", fancyHue(stone))) return false;
-  if (!has("clarities", stone.clarity)) return false;
-  if (!has("cuts", stone.cut)) return false;
-  if (!has("polishes", stone.polish)) return false;
-  if (!has("symmetries", stone.symmetry)) return false;
-  if (!has("fluorescences", stone.fluorescence)) return false;
-  if (!has("labs", stone.lab)) return false;
   for (const key of RANGE_KEYS) {
     if (!rangeActive(filters, bounds, key)) continue;
     const value = rangeValue(stone, key);
@@ -192,53 +214,106 @@ function matches(stone: Stone, filters: Filters, bounds: Bounds, skip?: ListKey)
   return true;
 }
 
-const FACET_VALUE: { [K in ListKey]: (s: Stone) => string | undefined } = {
-  shapes: (s) => s.shape,
-  colors: (s) => (isColorGrade(s.color) ? s.color : FANCY),
-  hues: fancyHue,
-  clarities: (s) => s.clarity,
-  cuts: (s) => s.cut,
-  polishes: (s) => s.polish,
-  symmetries: (s) => s.symmetry,
-  fluorescences: (s) => s.fluorescence,
-  labs: (s) => s.lab,
-};
+/** Whether a stone passes one facet that has a selection. */
+function inFacet(stone: Stone, filters: Filters, key: ListKey) {
+  const value = FACET_VALUE[key](stone);
+  return value !== undefined && (filters[key] as readonly string[]).includes(value);
+}
 
-/** Per-option counts for every facet, each ignoring its own selection. */
+function matches(stone: Stone, filters: Filters, bounds: Bounds) {
+  return matchesFixed(stone, filters, bounds) && LIST_KEYS.every((key) => !filters[key].length || inFacet(stone, filters, key));
+}
+
+/**
+ * Per-option counts for every facet, each ignoring its own selection — so a
+ * stone that fails only the colour filter still counts toward the colour
+ * chips. One pass over the stones rather than one per facet.
+ */
 export function facetCounts(stones: Stone[], filters: Filters, bounds: Bounds) {
-  const out = {} as Record<ListKey, Record<string, number>>;
-  for (const key of Object.keys(FACET_VALUE) as ListKey[]) {
-    const counts: Record<string, number> = {};
-    for (const s of stones) {
-      if (!matches(s, filters, bounds, key)) continue;
-      const value = FACET_VALUE[key](s);
-      if (value !== undefined) counts[value] = (counts[value] ?? 0) + 1;
+  const out = Object.fromEntries(LIST_KEYS.map((key) => [key, {}])) as Record<ListKey, Record<string, number>>;
+  const active = LIST_KEYS.filter((key) => filters[key].length);
+  const tally = (key: ListKey, stone: Stone) => {
+    const value = FACET_VALUE[key](stone);
+    if (value !== undefined) out[key][value] = (out[key][value] ?? 0) + 1;
+  };
+  for (const stone of stones) {
+    if (!matchesFixed(stone, filters, bounds)) continue;
+    let failed: ListKey | undefined;
+    let failures = 0;
+    for (const key of active) {
+      if (inFacet(stone, filters, key)) continue;
+      failed = key;
+      if (++failures > 1) break;
     }
-    out[key] = counts;
+    if (failures > 1) continue;
+    if (failed) tally(failed, stone);
+    else for (const key of LIST_KEYS) tally(key, stone);
   }
   return out;
 }
 
+export type FacetCounts = ReturnType<typeof facetCounts>;
+
+/**
+ * The catalogue filters on the server (catalog-search.ts) and the browser
+ * receives one page of results at a time, since the stock lists run to tens
+ * of thousands of stones. These are the shapes that travel.
+ */
+export type CatalogPage = {
+  /** Every stone matching the filters, not just this page. */
+  count: number;
+  stones: Stone[];
+  /** Option counts for the filter chips; sent with the first page only. */
+  counts?: FacetCounts;
+};
+
+/** What the filter panel needs to know about a whole stock list. */
+export type CatalogSummary = {
+  total: number;
+  bounds: Bounds;
+  /** Any SKUs carrying an intake date, for the "Recently added" sort. */
+  hasDates: boolean;
+  hasFancy: boolean;
+  hasLowerColors: boolean;
+};
+
+export const CATALOG_PAGE_SIZE = 12;
+
 export function filterStones(stones: Stone[], filters: Filters, sort: Sort, bounds: Bounds): Stone[] {
   const matched = stones.filter((s) => matches(s, filters, bounds));
-  const by = (key: (s: Stone) => number, dir = 1) => (a: Stone, b: Stone) => {
-    const ka = key(a);
-    const kb = key(b);
-    // Unmeasurable values go last whichever way the sort runs.
-    if (Number.isNaN(ka) || Number.isNaN(kb)) return Number(Number.isNaN(ka)) - Number(Number.isNaN(kb));
-    return (ka - kb) * dir || b.carat - a.carat;
+  // Keys are worked out once per stone, not once per comparison: some parse
+  // text, and a sort compares n·log n times.
+  const keyed = (key: (s: Stone) => number) => {
+    const keys = new Map(matched.map((s) => [s, key(s)]));
+    return (s: Stone) => keys.get(s)!;
+  };
+  const by = (rawKey: (s: Stone) => number, dir = 1) => {
+    const key = keyed(rawKey);
+    return (a: Stone, b: Stone) => {
+      const ka = key(a);
+      const kb = key(b);
+      // Unmeasurable values go last whichever way the sort runs.
+      if (Number.isNaN(ka) || Number.isNaN(kb)) return Number(Number.isNaN(ka)) - Number(Number.isNaN(kb));
+      return (ka - kb) * dir || b.carat - a.carat;
+    };
   };
   switch (sort) {
-    case "recent":
-      return matched.sort((a, b) => addedKey(b) - addedKey(a));
+    case "recent": {
+      const added = keyed(addedKey);
+      return matched.sort((a, b) => added(b) - added(a));
+    }
     case "bestOverall":
       return matched.sort(by((s) => colorRank(s) + clarityRank(s) + finishRank(s)));
     case "caratDesc":
       return matched.sort((a, b) => b.carat - a.carat);
     case "caratAsc":
       return matched.sort((a, b) => a.carat - b.carat);
-    case "colorBest":
-      return matched.sort((a, b) => colorRank(a) - colorRank(b) || a.color.localeCompare(b.color) || b.carat - a.carat);
+    case "colorBest": {
+      // Within a rank, colours in collation order, as localeCompare would put them.
+      const names = [...new Set(matched.map((s) => s.color))].sort((a, b) => a.localeCompare(b));
+      const collation = new Map(names.map((name, i) => [name, i]));
+      return matched.sort(by((s) => colorScaleRank(s) * names.length + collation.get(s.color)!));
+    }
     case "clarityBest":
       return matched.sort(by(clarityRank));
     case "finishBest":
@@ -292,7 +367,7 @@ const PARAM: Record<ListKey, string> = {
 
 const ALLOWED: Record<ListKey, readonly string[]> = {
   shapes: SHAPES.map((s) => s.slug),
-  colors: [...COLOR_GRADES, FANCY],
+  colors: [...COLOR_GRADES, LOWER_COLORS, FANCY],
   hues: FANCY_HUES,
   clarities: CLARITY_GRADES,
   cuts: CUT_GRADES,
@@ -371,7 +446,8 @@ export const RANGE_LABEL: Record<RangeKey, { label: string; format: (v: number) 
 };
 
 export function optionName(key: ListKey, value: string) {
-  return key === "shapes" ? SHAPE_BY_SLUG[value as ShapeSlug].name : value;
+  if (key === "shapes") return SHAPE_BY_SLUG[value as ShapeSlug].name;
+  return key === "colors" && value === LOWER_COLORS ? "K–Z" : value;
 }
 
 /** Every active constraint as a removable label — used for the pills on screen and the sheet header. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { StoneGrid } from "./stone-grid";
 import {
@@ -14,32 +14,26 @@ import {
   ShapeFilter,
   SortSelect,
 } from "./catalog-controls";
-import {
-  CLARITY_GRADES,
-  COLOR_GRADES,
-  FLUORESCENCE,
-  LABS,
-  addedKey,
-  isColorGrade,
-  type Origin,
-  type Stone,
-} from "@/lib/stones";
+import { CLARITY_GRADES, COLOR_GRADES, FLUORESCENCE, LABS, type Origin } from "@/lib/stone-vocabulary";
 import {
   FANCY,
   FANCY_HUES,
   FINISH_GRADES,
+  LOWER_COLORS,
   PRESETS,
   RANGE_KEYS,
   SORTS,
   SORT_GROUPS,
+  CATALOG_PAGE_SIZE,
   activeFilterList,
   emptyFilters,
-  facetCounts,
-  filterStones,
   filtersFromParams,
   filtersToParams,
+  optionName,
   presetActive,
-  stoneBounds,
+  type CatalogPage,
+  type CatalogSummary,
+  type FacetCounts,
   type Filters,
   type ListKey,
   type Range,
@@ -47,18 +41,32 @@ import {
   type Sort,
 } from "@/lib/catalog-filter";
 
-const PAGE = 12;
+/** Results on screen, and the query string they answer. */
+type Loaded = { query: string; count: number; stones: CatalogPage["stones"]; counts: FacetCounts };
+
+async function loadPage(origin: Origin, query: string, offset: number, signal?: AbortSignal) {
+  const params = new URLSearchParams(query);
+  params.set("origin", origin);
+  if (offset) params.set("offset", String(offset));
+  const res = await fetch(`/api/stones?${params}`, { signal });
+  if (!res.ok) throw new Error(`Catalogue request failed: ${res.status}`);
+  return (await res.json()) as CatalogPage;
+}
 
 const MORE_KEYS: (ListKey | RangeKey)[] = ["polishes", "symmetries", "fluorescences", "table", "depth", "ratio"];
 
 export function Catalog({
-  stones,
   origin,
+  summary,
+  firstPage,
   initialQuery = "",
   notice,
 }: {
-  stones: Stone[];
   origin: Origin;
+  /** The whole stock list in brief; the stones themselves stay on the server. */
+  summary: CatalogSummary;
+  /** Results for `initialQuery`, rendered on the server so the first view needs no request. */
+  firstPage: CatalogPage;
   /**
    * The page's query string. Every filter and the sort round-trip through it,
    * so guide links (`?color=D,E`), shared URLs and the PDF sheet all agree.
@@ -66,19 +74,73 @@ export function Catalog({
   initialQuery?: string;
   notice?: string;
 }) {
-  const bounds = useMemo(() => stoneBounds(stones), [stones]);
+  const { bounds, total, hasDates, hasFancy, hasLowerColors } = summary;
   const empty = useMemo(() => emptyFilters(bounds), [bounds]);
   const [initial] = useState(() => filtersFromParams(new URLSearchParams(initialQuery), bounds));
 
   const [filters, setFilters] = useState<Filters>(initial.filters);
   const [sort, setSortState] = useState<Sort>(initial.sort);
-  const [visible, setVisible] = useState(PAGE);
-  const hasDates = useMemo(() => stones.some((s) => addedKey(s) > 0), [stones]);
-  const hasFancy = useMemo(() => stones.some((s) => !isColorGrade(s.color)), [stones]);
+
+  const query = filtersToParams(filters, sort, bounds).toString();
+
+  const [loaded, setLoaded] = useState<Loaded>(() => ({
+    query,
+    count: firstPage.count,
+    stones: firstPage.stones,
+    counts: firstPage.counts ?? ({} as FacetCounts),
+  }));
+  const [failedQuery, setFailedQuery] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [more, setMore] = useState<"idle" | "loading" | "failed">("idle");
+  const moreRequest = useRef<AbortController | null>(null);
+
+  // Every change of filters or sort asks the server for the first page again.
+  // Aborting on cleanup means a slow answer to an old query never lands.
+  useEffect(() => {
+    if (query === loaded.query) return;
+    const controller = new AbortController();
+    if (moreRequest.current) {
+      moreRequest.current.abort();
+      moreRequest.current = null;
+      setMore("idle");
+    }
+    loadPage(origin, query, 0, controller.signal)
+      .then((page) => {
+        setLoaded({ query, count: page.count, stones: page.stones, counts: page.counts ?? ({} as FacetCounts) });
+        setFailedQuery(null);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setFailedQuery(query);
+      });
+    return () => controller.abort();
+  }, [origin, query, loaded.query, attempt]);
+
+  const loading = query !== loaded.query && failedQuery !== query;
+
+  function retry() {
+    setFailedQuery(null);
+    setAttempt((n) => n + 1);
+  }
+
+  async function showMore() {
+    const controller = new AbortController();
+    moreRequest.current = controller;
+    setMore("loading");
+    try {
+      const page = await loadPage(origin, loaded.query, loaded.stones.length, controller.signal);
+      setLoaded((prev) =>
+        prev.query === loaded.query ? { ...prev, stones: [...prev.stones, ...page.stones] } : prev,
+      );
+      setMore("idle");
+    } catch {
+      if (!controller.signal.aborted) setMore("failed");
+    } finally {
+      if (moreRequest.current === controller) moreRequest.current = null;
+    }
+  }
 
   const update = useCallback((change: (prev: Filters) => Filters) => {
     setFilters(change);
-    setVisible(PAGE);
   }, []);
 
   function toggle<K extends ListKey>(key: K, value: Filters[K][number]) {
@@ -96,19 +158,13 @@ export function Catalog({
 
   function setSort(next: Sort) {
     setSortState(next);
-    setVisible(PAGE);
   }
 
-  const results = useMemo(
-    () => filterStones(stones, filters, sort, bounds),
-    [stones, filters, sort, bounds],
-  );
-  const counts = useMemo(() => facetCounts(stones, filters, bounds), [stones, filters, bounds]);
+  const counts = loaded.counts;
   const active = activeFilterList(filters, bounds);
   const moreActive = active.filter((a) => MORE_KEYS.includes(a.key as ListKey)).length;
 
-  const query = filtersToParams(filters, sort, bounds).toString();
-  // The sheet covers every matching stone, not just the page shown so far.
+  // The sheet covers the matching stones (up to its limit), not just the page shown so far.
   const sheetHref = `/spec-sheet/${origin === "natural" ? "natural" : "lab-grown"}${query ? `?${query}` : ""}`;
 
   // Keep the address bar in step so the current view can be bookmarked or shared.
@@ -132,9 +188,14 @@ export function Catalog({
 
   const clearAll = () => update(() => empty);
 
-  // Re-keying the grid on the filter signature replays the entry transition,
-  // which is what makes a filter change feel like it landed.
-  const signature = JSON.stringify([filters, sort]);
+  // Re-keying the grid on the query its results answer replays the entry
+  // transition when they arrive, which is what makes a filter change feel like it landed.
+  const signature = loaded.query;
+  const colorOptions = [
+    ...COLOR_GRADES,
+    ...(hasLowerColors ? [LOWER_COLORS] : []),
+    ...(hasFancy ? [FANCY] : []),
+  ] as Filters["colors"];
 
   const sortGroups = SORT_GROUPS.map((g) => ({
     ...g,
@@ -190,7 +251,8 @@ export function Catalog({
 
         <ChipSet
           label="Colour"
-          options={hasFancy ? [...COLOR_GRADES, FANCY] : COLOR_GRADES}
+          options={colorOptions}
+          optionLabel={(v) => optionName("colors", v)}
           selected={filters.colors}
           counts={counts.colors}
           onToggle={(v) => toggle("colors", v)}
@@ -281,13 +343,13 @@ export function Catalog({
       <div>
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-hairline pb-5">
           <p aria-live="polite" className="text-[15px]">
-            {results.length.toLocaleString()} {results.length === 1 ? "stone" : "stones"}
-            {results.length !== stones.length ? (
-              <span className="text-ink-muted"> of {stones.length.toLocaleString()}</span>
+            {loaded.count.toLocaleString()} {loaded.count === 1 ? "stone" : "stones"}
+            {loaded.count !== total ? (
+              <span className="text-ink-muted"> of {total.toLocaleString()}</span>
             ) : null}
           </p>
           <SortSelect value={sort} labels={SORTS} groups={sortGroups} onChange={setSort} />
-          {results.length > 0 ? (
+          {loaded.count > 0 ? (
             <a
               href={sheetHref}
               download
@@ -297,11 +359,23 @@ export function Catalog({
             </a>
           ) : null}
           {notice ? <p className="w-full text-[13px] text-ink-muted">{notice}</p> : null}
+          {failedQuery === query ? (
+            <p role="alert" className="w-full text-[13px] text-ink-muted">
+              The list could not be updated.{" "}
+              <button
+                type="button"
+                onClick={retry}
+                className="underline underline-offset-4 transition-colors duration-200 hover:text-ink"
+              >
+                Try again
+              </button>
+            </p>
+          ) : null}
         </div>
 
         <ActiveFilters items={active} onRemove={remove} onClear={clearAll} />
 
-        {results.length === 0 ? (
+        {loaded.count === 0 ? (
           <div className="mt-10 rounded-[22px] border border-hairline bg-panel p-8">
             <h3 className="font-display text-2xl">Nothing matches that combination</h3>
             <p className="measure mt-2 text-[15px] text-ink-muted-panel">
@@ -315,26 +389,34 @@ export function Catalog({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
-            className="mt-8"
+            aria-busy={loading}
+            className={`mt-8 transition-opacity duration-200 ${loading ? "opacity-50" : ""}`}
           >
             <StoneGrid
-              stones={results.slice(0, visible)}
+              stones={loaded.stones}
               className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
             />
           </motion.div>
         )}
 
-        {visible < results.length ? (
+        {loaded.stones.length < loaded.count ? (
           <div className="mt-10 flex flex-col items-center gap-3">
             <p className="text-[13px] text-ink-muted">
-              Showing {visible} of {results.length.toLocaleString()}
+              {more === "failed"
+                ? "Those stones could not be loaded."
+                : `Showing ${loaded.stones.length.toLocaleString()} of ${loaded.count.toLocaleString()}`}
             </p>
             <button
               type="button"
-              onClick={() => setVisible((v) => v + PAGE)}
-              className="rounded-full border border-ink px-8 py-3 text-[15px] transition-colors duration-200 hover:bg-ink hover:text-white"
+              onClick={showMore}
+              disabled={more === "loading" || loading}
+              className="rounded-full border border-ink px-8 py-3 text-[15px] transition-colors duration-200 hover:bg-ink hover:text-white disabled:opacity-50"
             >
-              Show {Math.min(PAGE, results.length - visible)} more
+              {more === "failed"
+                ? "Try again"
+                : more === "loading"
+                  ? "Loading…"
+                  : `Show ${Math.min(CATALOG_PAGE_SIZE, loaded.count - loaded.stones.length)} more`}
             </button>
           </div>
         ) : null}

@@ -2,7 +2,6 @@ import type { MetadataRoute } from "next";
 import { GUIDES } from "@/lib/guides";
 import { insightDate, listInsights } from "@/lib/insights";
 import { SHAPES } from "@/lib/shapes";
-import { ALL_STONES } from "@/lib/stones";
 import { ALL_JEWELRY } from "@/lib/real-jewelry";
 
 const BASE = "https://www.imperialstargems.com";
@@ -18,7 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/lab-grown-diamonds", priority: 0.9 },
     { path: "/shapes", priority: 0.8 },
     ...SHAPES.map((s) => ({ path: `/shapes/${s.slug}`, priority: 0.7 })),
-    ...ALL_STONES.map((s) => ({ path: `/stones/${s.sku}`, priority: 0.5 })),
+    // Stone pages have sitemaps of their own: see stones/sitemap.ts.
     { path: "/jewelry", priority: 0.9 },
     ...ALL_JEWELRY.map((j) => ({ path: `/jewelry/${j.sku}`, priority: 0.5 })),
     { path: "/build-a-ring", priority: 0.8 },
