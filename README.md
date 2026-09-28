@@ -327,8 +327,24 @@ up the app, connect the repository in the Amplify console; it picks up
   `ENQUIRY_WEBHOOK_URL`, `ENQUIRY_FORWARD_EMAIL`, `GEOLITE2_COUNTRY_DB`. A new
   server-side setting needs its name added there. `NEXT_PUBLIC_*` variables are
   read at build time and need nothing extra.
-- **Leave the framework setting alone.** Amplify may label the app "Next.js -
-  SSR"; the `deploy-manifest.json` in the build output is what it deploys.
+- **Change the branch's framework from "Next.js - SSR".** Amplify sets it
+  when it sees `next` in `package.json`, and with it set, Amplify ignores the
+  `deploy-manifest.json` and runs its own Next.js step instead, which fails
+  after a successful build with *"Can't find required-server-files.json in
+  build output directory"*. With any other framework on a `WEB_COMPUTE` app,
+  Amplify deploys the manifest. The setting isn't in the repository; change it
+  once, from AWS CloudShell (the `>_` icon in the AWS console, in the app's
+  region):
+
+  ```bash
+  aws amplify list-apps --query "apps[].[name,appId,platform]" --output table
+  aws amplify update-branch --app-id <appId> --branch-name main --framework Web
+  aws amplify start-job --app-id <appId> --branch-name main --job-type RELEASE
+  ```
+
+  The platform column should read `WEB_COMPUTE`; if it doesn't,
+  `aws amplify update-app --app-id <appId> --platform WEB_COMPUTE`. Repeat the
+  `update-branch` for any other connected branch.
 
 Amplify refuses a server bundle over **220 MB** and a server response over
 **5.72 MB**, and the packaging script checks both, failing the build with the

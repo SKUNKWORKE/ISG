@@ -3,6 +3,12 @@
 # The build produces .amplify-hosting/ in Amplify's deployment-specification
 # layout (scripts/package-amplify.mjs), which Amplify deploys as it is: the
 # standalone Next.js server as compute, public/ and .next/static on the CDN.
+#
+# Amplify only deploys it when the branch's framework is NOT "Next.js - SSR",
+# the value it picks automatically for a Next.js repository. Otherwise the
+# deploy fails after a successful build with "Can't find
+# required-server-files.json". Change it once in the Amplify settings; the
+# README shows the command.
 version: 1
 frontend:
   phases:
