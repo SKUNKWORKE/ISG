@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { ShapeGlyph } from "./shape-glyph";
 import { StarIcon } from "./shortlist-toggle";
 import { OPEN_TRAY_EVENT, useHydrated, useShortlist } from "@/hooks/use-shortlist";
@@ -81,7 +81,7 @@ export function ShortlistTray() {
     <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-40 flex flex-col items-end gap-3 sm:right-6">
       <AnimatePresence>
         {open ? (
-          <motion.div
+          <m.div
             ref={panelRef}
             id="shortlist-panel"
             role="region"
@@ -171,7 +171,7 @@ export function ShortlistTray() {
             >
               Clear shortlist
             </button>
-          </motion.div>
+          </m.div>
         ) : null}
       </AnimatePresence>
 

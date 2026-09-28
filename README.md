@@ -20,7 +20,8 @@ re-running the conversion step.
 
 | Command | What it does |
 |---|---|
-| `npm run build` | Production build |
+| `npm run build` | Production build (resizes jewelry photos first) |
+| `npm run build:amplify` | Production build packaged for AWS Amplify, in `.amplify-hosting/` |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run sequence:convert` | Rebuilds `public/sequence` from the raw PNGs |
 
@@ -91,9 +92,14 @@ undecodable, then writes:
 
 | Folder | Frames | Width | Size |
 |---|---|---|---|
-| `scroll/` | 700 | 1080px (source resolution) | 7.4 MB |
-| `scroll-mobile/` | 234 (every 3rd) | 900px | 1.7 MB |
-| `rotate/` | 138 stand-in, 333 once supplied | 720px | 0.9 MB |
+| `scroll/` | 351 (every 2nd) | 1200px | 10.5 MB |
+| `scroll-mobile/` | 351 | 720px | 6.2 MB |
+| `rotate/` | 167 | 1200px | 4.8 MB |
+| `rotate-mobile/` | 167 | 720px | 2.7 MB |
+
+The desktop tiers were 1440px until September 2026; at 1200px the hero canvas
+(about 1,440 device pixels at most) stretches them by 1.2× at worst, and the
+home page downloads about 10 MB less.
 
 Frames are flattened onto the porcelain background (`#FAFAFA`) rather than
 keeping an alpha channel — they render on that ground everywhere.
@@ -261,7 +267,7 @@ lab-grown; `OM-1026` natural). Stock comes from two places:
 | Source | Contents |
 |---|---|
 | [`src/lib/real-stones.ts`](src/lib/real-stones.ts), [`real-natural-stones.ts`](src/lib/real-natural-stones.ts) | The first stock lists, kept by hand |
-| `src/data/stones/<prefix>.json` | Supplier workbooks, one file per supplier, loaded by [`supplier-stones.ts`](src/lib/supplier-stones.ts) |
+| `src/data/stones/<prefix>.json` | Supplier workbooks, one file per supplier, read by [`supplier-stones.ts`](src/lib/supplier-stones.ts) |
 
 To load a supplier's new list:
 
@@ -279,6 +285,11 @@ prints how many and why. A blank fluorescence is kept and simply not shown.
 Report numbers, prices and locations are never copied; the workbook remains the
 lookup from SKU to report.
 
+The supplier files are tables rather than lists of objects — a row per stone,
+with repeated words (shapes, grades, labs) stored once per file — which keeps
+73,602 stones to about 5 MB. They are read from disk once per server process,
+not imported: an import compiled them into several server bundles, 23 MB each.
+
 **At this size nothing ships whole to the browser.** The stock module is
 `server-only`; client code imports types and grade lists from
 [`stone-vocabulary.ts`](src/lib/stone-vocabulary.ts). The catalogue pages render
@@ -288,6 +299,59 @@ asks `GET /api/stones` for one page of results plus the filter counts
 their first visit rather than at build time, stone URLs have their own sitemaps
 (`/stones/sitemap/<n>.xml`, listed in `robots.txt`), and a catalogue spec sheet
 lists at most the first 1,000 matching stones.
+
+---
+
+## Hosting on AWS Amplify
+
+Amplify's built-in Next.js support stops at Next.js 15, and this site is on 16,
+so it deploys through Amplify's framework-neutral **deployment specification**
+instead: a Node server on port 3000 plus a folder of static files.
+`npm run build:amplify` runs `next build` (with `output: "standalone"`), then
+[`scripts/package-amplify.mjs`](scripts/package-amplify.mjs) writes:
+
+```
+.amplify-hosting/
+  deploy-manifest.json   which paths are files and which go to the server
+  compute/default/       the standalone Next.js server (nodejs22.x)
+  static/                public/ and .next/static, served by Amplify's CDN
+```
+
+[`amplify.yml`](amplify.yml) runs that on Node 22 and deploys the folder. To set
+up the app, connect the repository in the Amplify console; it picks up
+`amplify.yml` from the repository root. Then:
+
+- **Environment variables.** Set them in the Amplify console as usual. The
+  running server only sees the ones `amplify.yml` copies into `.env.production`
+  during the build — `imperialstargem_MONGODB_URI`, `MONGODB_DB`,
+  `ENQUIRY_WEBHOOK_URL`, `ENQUIRY_FORWARD_EMAIL`, `GEOLITE2_COUNTRY_DB`. A new
+  server-side setting needs its name added there. `NEXT_PUBLIC_*` variables are
+  read at build time and need nothing extra.
+- **Leave the framework setting alone.** Amplify may label the app "Next.js -
+  SSR"; the `deploy-manifest.json` in the build output is what it deploys.
+
+Amplify refuses a server bundle over **220 MB** and a server response over
+**5.72 MB**, and the packaging script checks both, failing the build with the
+reason rather than leaving it to the deploy. The server bundle is about 125 MB,
+down from 275 MB, most of it prerendered pages. What keeps it there:
+
+- **Stone data** is read from disk once (see *Stock*), not compiled into bundles.
+- **No image server.** Every jewelry photo is resized before the build by
+  [`scripts/build-images.mjs`](scripts/build-images.mjs) to the widths in
+  `src/data/image-widths.json`, into `public/_img/` (generated, not
+  committed), and [`image-loader.ts`](src/lib/image-loader.ts) points
+  `next/image` at those files. The CDN serves photos directly, and the server
+  carries no image library. The first build resizes 1,750 photos to six widths
+  in about five minutes; after that `amplify.yml` restores them from cache,
+  and only changed photos are redone. (WebP rather than the AVIF Next's
+  optimizer negotiated per browser: static files can't negotiate, and WebP
+  works on every browser the site supports.)
+- **Stone sitemaps** hold 20,000 URLs each (about 3.5 MB).
+- **Pages rendered on demand stay in memory** (`isrFlushToDisk: false`), since
+  the server's folder is read-only on Amplify.
+
+Vercel's analytics scripts are only included on a Vercel build (`VERCEL=1`);
+elsewhere they would 404.
 
 ---
 
@@ -369,6 +433,9 @@ assets/sequence/raw-700/      700-frame source PNGs, gitignored
 assets/sequence/raw-360/      333-frame turntable PNGs, gitignored — to be supplied
 scripts/convert-sequence.mjs  PNG -> WebP tiers + manifest
 scripts/import-stones.py      Supplier stock workbooks -> src/data/stones/*.json
+scripts/build-images.mjs      Jewelry photos -> public/_img/ at fixed widths (every build)
+scripts/package-amplify.mjs   next build output -> .amplify-hosting/ for AWS Amplify
+amplify.yml                   Amplify build settings
 public/sequence/              scroll/, scroll-mobile/, rotate/
 src/app/                      Routes: home, two catalogues, shapes, craftsmanship, contact
 src/app/api/enquiry/          Enquiry endpoint

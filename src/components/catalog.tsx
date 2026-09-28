@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { StoneGrid } from "./stone-grid";
 import {
   ActiveFilters,
@@ -384,7 +384,7 @@ export function Catalog({
             </p>
           </div>
         ) : (
-          <motion.div
+          <m.div
             key={signature}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -396,7 +396,7 @@ export function Catalog({
               stones={loaded.stones}
               className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
             />
-          </motion.div>
+          </m.div>
         )}
 
         {loaded.stones.length < loaded.count ? (

@@ -1,0 +1,33 @@
+# AWS Amplify Hosting build settings. See "Hosting on AWS Amplify" in the README.
+#
+# The build produces .amplify-hosting/ in Amplify's deployment-specification
+# layout (scripts/package-amplify.mjs), which Amplify deploys as it is: the
+# standalone Next.js server as compute, public/ and .next/static on the CDN.
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Next.js 16 needs Node.js 20.9 or later; the server runs on nodejs22.x.
+        - nvm install 22
+        - node --version
+        # npm's download cache is kept between builds; node_modules itself is
+        # rebuilt by npm ci every time, so caching it would gain nothing.
+        - npm ci --cache .npm --prefer-offline
+    build:
+      commands:
+        # The server only sees variables written to .env.production at build
+        # time; Amplify does not pass its environment variables to the running
+        # app. Add a name here when the app gains a server-side setting.
+        - env | grep -E '^(imperialstargem_MONGODB_URI|MONGODB_DB|ENQUIRY_WEBHOOK_URL|ENQUIRY_FORWARD_EMAIL|GEOLITE2_COUNTRY_DB)=' >> .env.production || true
+        - npm run build:amplify
+  artifacts:
+    baseDirectory: .amplify-hosting
+    files:
+      - "**/*"
+  cache:
+    paths:
+      - .npm/**/*
+      - .next/cache/**/*
+      # Resized jewelry photos: kept between builds so only changed photos are redone.
+      - public/_img/**/*

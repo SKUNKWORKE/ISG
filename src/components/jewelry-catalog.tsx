@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { JewelryGrid } from "./jewelry-grid";
 import {
   ActiveFilters,
@@ -235,7 +235,7 @@ export function JewelryCatalog({
             </p>
           </div>
         ) : (
-          <motion.div
+          <m.div
             key={signature}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -246,7 +246,7 @@ export function JewelryCatalog({
               items={results.slice(0, visible)}
               className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
             />
-          </motion.div>
+          </m.div>
         )}
 
         {visible < results.length ? (

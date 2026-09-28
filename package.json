@@ -9,8 +9,10 @@
     "typecheck": "tsc --noEmit",
     "sequence:convert": "node scripts/convert-sequence.mjs",
     "jewelry:scrape": "node scripts/scrape-jewelry.mjs",
-    "prebuild": "node scripts/copy-flags.mjs",
-    "flags:copy": "node scripts/copy-flags.mjs"
+    "prebuild": "node scripts/copy-flags.mjs && node scripts/build-images.mjs",
+    "flags:copy": "node scripts/copy-flags.mjs",
+    "images:build": "node scripts/build-images.mjs",
+    "build:amplify": "npm run build && node scripts/package-amplify.mjs"
   },
   "dependencies": {
     "@maxmind/geoip2-node": "^7.1.0",

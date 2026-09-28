@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { ShapeGlyph } from "./shape-glyph";
 import { GLYPHS } from "@/lib/glyphs";
 import { useDeviceType } from "@/hooks/use-device-type";
@@ -175,7 +175,7 @@ export function SiteHeader() {
 
       <AnimatePresence initial={false}>
         {open && drawer ? (
-          <motion.div
+          <m.div
             key="mobile-nav-drawer"
             id="mobile-nav"
             initial={{ opacity: 0, y: -8 }}
@@ -214,13 +214,13 @@ export function SiteHeader() {
                 Enquire
               </Link>
             </div>
-          </motion.div>
+          </m.div>
         ) : null}
       </AnimatePresence>
 
       <AnimatePresence initial={false}>
         {open && !drawer ? (
-          <motion.div
+          <m.div
             id="mobile-nav"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -239,7 +239,7 @@ export function SiteHeader() {
                 </Link>
               ))}
             </nav>
-          </motion.div>
+          </m.div>
         ) : null}
       </AnimatePresence>
     </header>

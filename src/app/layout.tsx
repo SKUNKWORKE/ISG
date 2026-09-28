@@ -10,8 +10,16 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ShortlistTray } from "@/components/shortlist-tray";
 import { JsonLd } from "@/components/json-ld";
+import { MotionProvider } from "@/components/motion-provider";
 import { STORE, WEBSITE } from "@/lib/structured-data";
 import "./globals.css";
+
+/**
+ * Vercel's analytics scripts are served by Vercel itself (/_vercel/...). On any
+ * other host — Amplify included — they 404 and only add weight, so they load
+ * only on a Vercel build, which sets VERCEL=1.
+ */
+const ON_VERCEL = process.env.VERCEL === "1";
 
 const displaySerif = Instrument_Serif({
   subsets: ["latin"],
@@ -64,13 +72,19 @@ export default function RootLayout({
           Skip to content
         </a>
         <JsonLd data={[STORE, WEBSITE]} />
-        <SiteHeader />
-        <main id="main">{children}</main>
-        <SiteFooter />
-        <ShortlistTray />
-        <GeoFlagBadge />
-        <Analytics />
-        <SpeedInsights />
+        <MotionProvider>
+          <SiteHeader />
+          <main id="main">{children}</main>
+          <SiteFooter />
+          <ShortlistTray />
+          <GeoFlagBadge />
+        </MotionProvider>
+        {ON_VERCEL ? (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        ) : null}
       </body>
     </html>
   );

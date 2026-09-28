@@ -9,7 +9,7 @@
   "tiers": {
     "scroll": {
       "frames": 351,
-      "width": 1440,
+      "width": 1200,
       "step": 2
     },
     "scroll-mobile": {
@@ -19,7 +19,7 @@
     },
     "rotate": {
       "frames": 167,
-      "width": 1440,
+      "width": 1200,
       "step": 2,
       "source": "wire-360"
     },

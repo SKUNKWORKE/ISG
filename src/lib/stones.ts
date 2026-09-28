@@ -53,8 +53,12 @@ export function findStone(sku: string): Stone | undefined {
   return BY_SKU.get(sku);
 }
 
-/** Google reads at most 50,000 URLs from one sitemap, so stone pages are split across several. */
-export const STONES_PER_SITEMAP = 50_000;
+/**
+ * Stone pages are split across several sitemaps. Google reads up to 50,000
+ * URLs from one, but Amplify Hosting caps a server response at 5.72 MB, and
+ * each entry is about 175 bytes — so 20,000 (~3.5 MB) leaves room.
+ */
+export const STONES_PER_SITEMAP = 20_000;
 
 export function stoneSitemapCount(): number {
   return Math.ceil(ALL_STONES.length / STONES_PER_SITEMAP);
