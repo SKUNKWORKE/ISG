@@ -3,9 +3,9 @@
  *
  * Builds the two independent sequences the site ships:
  *
- *   public/sequence/scroll/         every 2nd source frame     1440px  the hero cutting sequence
+ *   public/sequence/scroll/         every 2nd source frame     1200px  the hero cutting sequence
  *   public/sequence/scroll-mobile/  the same frames             720px  hero on narrow screens
- *   public/sequence/rotate/         every 2nd turntable frame  1440px  looping 360° turn
+ *   public/sequence/rotate/         every 2nd turntable frame  1200px  looping 360° turn
  *   public/sequence/rotate-mobile/  the same frames             720px  the turn on narrow screens
  *
  * Every frame is cropped to the stone (the renders leave most of the frame
@@ -240,13 +240,15 @@ async function main() {
   const intro = thin(scroll);
   const loop = rotate.filter((_, i) => i % FRAME_STEP === 0);
   const tiers = {
-    // 1440: the crop's native size, and above the hero canvas's ~1440 device pixels.
-    scroll: { ...(await writeTier("scroll", intro, 1440, 76)), step: FRAME_STEP },
+    // 1200: the hero canvas peaks at ~1440 device pixels, and thin lines on a
+    // flat ground survive that 1.2x stretch; the 1440 crop was 40% heavier
+    // for the 25 MB this page used to download.
+    scroll: { ...(await writeTier("scroll", intro, 1200, 75)), step: FRAME_STEP },
     // 720: a phone's hero canvas is ~350 CSS pixels at a capped 2x ratio.
     "scroll-mobile": { ...(await writeTier("scroll-mobile", intro, 720, 70)), step: FRAME_STEP },
     // A loop needs no forced last frame: the turn wraps back to its first.
     rotate: {
-      ...(await writeTier("rotate", loop, 1440, 76)),
+      ...(await writeTier("rotate", loop, 1200, 75)),
       step: FRAME_STEP,
       source: rotateSource,
     },

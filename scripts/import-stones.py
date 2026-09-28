@@ -2,7 +2,13 @@
 """
 Converts supplier stock workbooks (.xlsx) into src/data/stones/<prefix>.json,
 one file per workbook, named after the SKU prefix its rows carry ("SSD228811"
--> ssd.json). src/lib/supplier-stones.ts loads every file in that folder.
+-> ssd.json). src/lib/supplier-stones.ts reads every file in that folder when
+the server starts.
+
+The files are a table rather than a list of objects: one row per stone, and
+the handful of repeated words (shapes, grades, labs) stored once per file and
+referred to by position. That keeps tens of thousands of stones to a few
+megabytes — see `encode()` below for the layout.
 
     pip install openpyxl
     python3 scripts/import-stones.py path/to/SSD_All_Stones.xlsx [more.xlsx ...]
@@ -266,6 +272,38 @@ def convert(row, index, hints):
     return stone, None
 
 
+# Fields in row order. Those in DICTIONARY_FIELDS are stored as an index into
+# the file's `values` list for that field (-1 for "not stated"); the rest are
+# stored as they are. shapeCode and featured are not stored: the site derives
+# the first from the shape and sets the second itself.
+FIELDS = [
+    "sku", "shape", "shapeName", "origin", "carat", "color", "clarity", "cut", "polish",
+    "symmetry", "fluorescence", "lab", "measurements", "tablePercent", "depthPercent",
+]
+DICTIONARY_FIELDS = [
+    "shape", "shapeName", "origin", "color", "clarity", "cut", "polish", "symmetry", "fluorescence", "lab",
+]
+
+
+def encode(stones):
+    """Stones -> the table written to src/data/stones/<prefix>.json."""
+    values = {f: sorted({s[f] for s in stones if s.get(f) is not None}) for f in DICTIONARY_FIELDS}
+    position = {f: {v: i for i, v in enumerate(vs)} for f, vs in values.items()}
+
+    def cell(stone, field):
+        value = stone.get(field)
+        if field in position:
+            return position[field][value] if value is not None else -1
+        if field == "measurements":
+            return value.removesuffix(" mm")
+        return value
+
+    dump = lambda value: json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    # One stone per line: small diffs when a supplier's list changes.
+    rows = ",\n".join(dump([cell(s, f) for f in FIELDS]) for s in stones)
+    return f'{{"format":1,"fields":{dump(FIELDS)},"values":{dump(values)},"rows":[\n{rows}\n]}}\n'
+
+
 def grading_key(stone):
     dims = tuple(float(n) for n in re.findall(r"\d+(?:\.\d+)?", stone["measurements"]))
     return (
@@ -338,9 +376,7 @@ def main(paths):
 
     for path, prefix, stones, skipped in outputs:
         out = OUT_DIR / f"{prefix}.json"
-        # One stone per line: small diffs when a supplier's list changes.
-        body = ",\n".join(json.dumps(s, ensure_ascii=False, separators=(",", ":")) for s in stones)
-        out.write_text(f"[\n{body}\n]\n")
+        out.write_text(encode(stones))
         by_origin = Counter(s["origin"] for s in stones)
         print(f"{path.name} -> {out.relative_to(ROOT)}: {by_origin['lab']} lab-grown, {by_origin['natural']} natural")
         for reason, n in sorted(skipped.items(), key=lambda kv: -kv[1]):

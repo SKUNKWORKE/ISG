@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useDeviceType } from "@/hooks/use-device-type";
 
 const MODAL_HIDDEN = { opacity: 0, scale: 0.96, y: 12 };
@@ -96,7 +96,7 @@ export function EnquiryDialog({
   return createPortal(
     <AnimatePresence>
       {open ? (
-        <motion.div
+        <m.div
           key="enquiry"
           className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6 max-md:p-0!"
           initial={{ opacity: 0 }}
@@ -111,7 +111,7 @@ export function EnquiryDialog({
             className="absolute inset-0 h-full w-full cursor-default bg-ink/25 backdrop-blur-[2px]"
           />
 
-          <motion.div
+          <m.div
             ref={panelRef}
             role="dialog"
             aria-modal="true"
@@ -134,8 +134,8 @@ export function EnquiryDialog({
             </div>
 
             <div className="px-6 pb-10 pt-6">{children}</div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       ) : null}
     </AnimatePresence>,
     document.body,
