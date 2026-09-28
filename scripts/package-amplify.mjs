@@ -147,6 +147,15 @@ for (const file of served) {
 console.log(`[amplify] compute/default ${mb(computeBytes)} of ${mb(MAX_COMPUTE_BYTES)}`);
 console.log(`[amplify] static          ${mb(staticBytes)}`);
 console.log(`[amplify] wrote .amplify-hosting/deploy-manifest.json (Next.js ${nextVersion}, ${RUNTIME})`);
+// Amplify sets AWS_APP_ID in its builds. The branch setting this depends on
+// can't be read from here, so say it where the failure would show up.
+if (process.env.AWS_APP_ID) {
+  console.log(
+    `[amplify] Deploys .amplify-hosting only if branch "${process.env.AWS_BRANCH ?? "?"}" has a framework other than ` +
+      `"Next.js - SSR". If the deploy fails with "Can't find required-server-files.json", run in AWS CloudShell:\n` +
+      `[amplify]   aws amplify update-branch --app-id ${process.env.AWS_APP_ID} --branch-name ${process.env.AWS_BRANCH ?? "main"} --framework Web`,
+  );
+}
 
 if (computeBytes > MAX_COMPUTE_BYTES) {
   fail(
