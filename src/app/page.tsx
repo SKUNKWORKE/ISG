@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { HeroSequence } from "@/components/hero-sequence";
 import { DiamondRotation } from "@/components/diamond-rotation";
 import { ShapeGrid } from "@/components/shape-grid";

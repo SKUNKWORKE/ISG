@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { RingComposite } from "./ring-composite";
@@ -176,7 +176,7 @@ export function RingBuilderReview({
             <h3 className="font-display text-[26px] leading-tight">
               {stone.shapeName} {stone.carat.toFixed(2)} ct
             </h3>
-            <Link href={builderHref(params, { stone: undefined, page: undefined })} className="shrink-0 text-[13px] text-ink-muted underline underline-offset-4 hover:text-ink">
+            <Link rel="nofollow" href={builderHref(params, { stone: undefined, page: undefined })} className="shrink-0 text-[13px] text-ink-muted underline underline-offset-4 hover:text-ink">
               Change
             </Link>
           </div>
@@ -192,7 +192,7 @@ export function RingBuilderReview({
             <>
               <div className="mt-1 flex items-baseline justify-between gap-4">
                 <h3 className="font-display text-[26px] leading-tight">{STYLE_NAME[design.style]}</h3>
-                <Link href={builderHref(params, { setting: undefined, page: undefined })} className="shrink-0 text-[13px] text-ink-muted underline underline-offset-4 hover:text-ink">
+                <Link rel="nofollow" href={builderHref(params, { setting: undefined, page: undefined })} className="shrink-0 text-[13px] text-ink-muted underline underline-offset-4 hover:text-ink">
                   Change
                 </Link>
               </div>

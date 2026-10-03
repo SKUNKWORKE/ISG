@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { notFound } from "next/navigation";
 import { JewelryGallery } from "@/components/jewelry-gallery";
 import { JewelryEnquireButton } from "@/components/jewelry-enquire-button";
@@ -113,6 +113,7 @@ export default async function JewelPage({ params }: Props) {
             <JewelryEnquireButton jewel={summary} />
             {isSettingDesign(jewel) ? (
               <Link
+                rel="nofollow"
                 href={`/build-a-ring?setting=${encodeURIComponent(jewel.sku)}`}
                 className="mt-3 block w-full rounded-full border border-hairline px-7 py-3 text-center text-[15px] transition-colors duration-200 hover:border-ink"
               >
@@ -133,6 +134,7 @@ export default async function JewelPage({ params }: Props) {
             </p>
             <a
               href={`/jewelry/${encodeURIComponent(jewel.sku)}/spec-sheet`}
+                rel="nofollow"
               download
               className="mt-2 inline-block text-[13px] text-ink-muted underline underline-offset-4 transition-colors duration-200 hover:text-ink"
             >

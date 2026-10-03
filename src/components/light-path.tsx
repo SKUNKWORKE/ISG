@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { GIA_CUT_SCALE, cutCatalogueHref, type DiagramProfile, type RayFate } from "@/lib/cut-grades";
 import { LAB_STONES, NATURAL_STONES, type CutGrade, type Stone } from "@/lib/stones";
 

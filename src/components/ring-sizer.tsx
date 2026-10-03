@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { useEffect, useId, useState } from "react";
 import {
   DIAMETER_MAX,
@@ -369,6 +369,7 @@ function SizeResult({ size }: { size: RingSize | null }) {
             <Row label="Circumference" value={`${size.circumference.toFixed(1)} mm`} />
           </dl>
           <Link
+            rel="nofollow"
             href={`/build-a-ring?size=${size.us}`}
             className="mt-6 block rounded-full bg-ink px-6 py-2.5 text-center text-[14px] text-white transition-opacity duration-200 hover:opacity-85"
           >

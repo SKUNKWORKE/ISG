@@ -3,6 +3,7 @@ import type { ShapeSlug } from "./shapes";
 import { REAL_LAB_STONES } from "./real-stones";
 import { REAL_NATURAL_STONES } from "./real-natural-stones";
 import { SUPPLIER_STONES } from "./supplier-stones";
+import stockUpdated from "@/data/stock-updated.json";
 import { isColorGrade, type Origin, type Stone } from "./stone-vocabulary";
 
 /**
@@ -59,6 +60,16 @@ export function findStone(sku: string): Stone | undefined {
  * each entry is about 175 bytes — so 20,000 (~3.5 MB) leaves room.
  */
 export const STONES_PER_SITEMAP = 20_000;
+
+/**
+ * When the stock lists last changed, written by scripts/import-stones.py.
+ *
+ * The stone sitemaps report this as every stone's <lastmod>. They used to
+ * report the build time, which told every crawler after every deploy that all
+ * seventy-odd thousand stone pages had just changed — and each of those
+ * re-crawls renders a page on the server.
+ */
+export const STOCK_UPDATED = new Date(`${stockUpdated.updated}T00:00:00Z`);
 
 export function stoneSitemapCount(): number {
   return Math.ceil(ALL_STONES.length / STONES_PER_SITEMAP);

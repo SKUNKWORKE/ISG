@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { useMemo, useState } from "react";
 import {
   CATEGORIES,

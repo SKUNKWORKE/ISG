@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Catalog } from "@/components/catalog";
+import { CatalogAddressScript } from "@/components/catalog-address-script";
 import { JsonLd } from "@/components/json-ld";
 import { breadcrumbs, collectionPage } from "@/lib/structured-data";
-import { toQueryString } from "@/lib/catalog-filter";
 import { catalogSummary, searchCatalog } from "@/lib/catalog-search";
 import { INVENTORY_NOTICE, LAB_STONES } from "@/lib/stones";
 
@@ -12,6 +12,8 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: "Lab-grown loose diamonds",
   description: DESCRIPTION,
+  // Every filtered view is the same page; ?shape=, ?sort= and the rest point here.
+  alternates: { canonical: "/lab-grown-diamonds" },
 };
 
 const EDUCATION = [
@@ -33,13 +35,13 @@ const EDUCATION = [
   },
 ];
 
-export default async function LabGrownDiamondsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const initialQuery = toQueryString(await searchParams);
-  const firstPage = searchCatalog("lab", new URLSearchParams(initialQuery));
+/**
+ * Static: the page doesn't read its query string, so it is prerendered once
+ * and served from the CDN rather than rendered for every visit. Filters in the
+ * address are applied by the catalogue in the browser, through /api/stones.
+ */
+export default function LabGrownDiamondsPage() {
+  const firstPage = searchCatalog("lab", new URLSearchParams());
 
   const jsonLd = [
     collectionPage({
@@ -87,11 +89,11 @@ export default async function LabGrownDiamondsPage({
       </section>
 
       <section className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 sm:py-16">
+        <CatalogAddressScript />
         <Catalog
           origin="lab"
           summary={catalogSummary("lab")}
           firstPage={firstPage}
-          initialQuery={initialQuery}
           notice={INVENTORY_NOTICE}
         />
       </section>

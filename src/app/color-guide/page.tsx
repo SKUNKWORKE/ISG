@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { ColorFinder } from "@/components/color-finder";
 import { ColorGradeTable, ColorScale } from "@/components/color-scale";
 import { ShapeGlyph } from "@/components/shape-glyph";

@@ -6,8 +6,8 @@ import { getSeasonalTheme } from "@/lib/geo/season";
 /**
  * Seeds the visitor's country before the page renders.
  *
- * This runs ahead of every document request and writes the resolved country to
- * a cookie, which the pre-paint script in the layout reads to pick a theme
+ * This runs ahead of a visitor's first document request and writes the resolved
+ * country to a cookie, which the pre-paint script in the layout reads to pick a theme
  * before the first frame. That is what keeps the theming flash-free without
  * making any page dynamic: the HTML stays static and cacheable, and only the
  * cookie varies per visitor.
@@ -26,7 +26,8 @@ import { getSeasonalTheme } from "@/lib/geo/season";
 export async function proxy(request: NextRequest) {
   const cached = decodeGeoCookie(request.cookies.get(GEO_COOKIE)?.value);
 
-  // A current cookie means the work is already done. Re-writing it on every
+  // The matcher already skips requests carrying the cookie; this guards hosts
+  // that don't apply matcher conditions. Re-writing a current cookie on every
   // request would also keep sliding its expiry, which is not the intent.
   if (cached) return NextResponse.next();
 
@@ -51,13 +52,45 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   /**
-   * Document requests only.
+   * First-visit document requests only. On Vercel the matcher is evaluated by
+   * the router before anything runs, so a request it excludes costs no
+   * function invocation at all — and this proxy used to be invoked for every
+   * page view and every link prefetch on the site, which was most of the
+   * project's function usage.
    *
-   * Without a matcher this would run on every asset fetch — CSS, JS chunks,
-   * images, the flag SVGs themselves — which would add a geo lookup to
-   * hundreds of requests per page load to no purpose. The negative lookahead
-   * excludes build output, the API (which does its own resolution), and
-   * anything that looks like a static file.
+   * The path pattern skips build output, the API (which does its own
+   * resolution), and anything that looks like a static file. Then, of what is
+   * left, the proxy is skipped when:
+   *
+   *  - the geo cookie is already set. The work is done, and the function's own
+   *    early return for this case was paying for an invocation to do nothing.
+   *    A stale cookie is refreshed by /api/geo, which the client calls when it
+   *    reads one (see use-visitor-country.ts).
+   *  - the request is a client-side navigation or a prefetch (`rsc`,
+   *    `next-router-prefetch`, `purpose: prefetch`). Those only happen after
+   *    a document load, which already set the cookie.
+   *  - the visitor is a crawler. Crawlers don't keep cookies, so without this
+   *    every page a bot fetched paid for a lookup whose only result is a theme
+   *    nobody sees.
+   *
+   * Matcher values must be literals (they are read at build time), so the
+   * cookie name is written out here; it is GEO_COOKIE in lib/geo/constants.ts.
    */
-  matcher: ["/((?!api|_next/static|_next/image|sequence/|flags/|.*\\.[\\w]+$).*)"],
+  matcher: [
+    {
+      source: "/((?!api|_next/static|_next/image|_next/data|_vercel|sequence/|flags/|_img/|.*\\.[\\w]+$).*)",
+      missing: [
+        { type: "cookie", key: "isg_geo" },
+        { type: "header", key: "rsc" },
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+        {
+          type: "header",
+          key: "user-agent",
+          value:
+            ".*(?:[Bb]ot\\b|[Cc]rawl|[Ss]pider|[Ss]lurp|facebookexternalhit|[Hh]eadless|Lighthouse|PageSpeed|curl/|[Ww]get/|python-|[Gg]o-http-client).*",
+        },
+      ],
+    },
+  ],
 };

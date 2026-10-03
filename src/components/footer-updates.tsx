@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { useId, useState } from "react";
 import { UPDATE_TOPICS, updatesWhatsappHref, type UpdateTopic } from "@/lib/contact";
 

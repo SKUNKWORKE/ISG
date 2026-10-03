@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { FourCsCalculator } from "@/components/fourcs-calculator";
 import { JsonLd } from "@/components/json-ld";
 import {

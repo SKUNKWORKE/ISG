@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { ShapeGlyph } from "./shape-glyph";
 import {
   CHART_CARATS,

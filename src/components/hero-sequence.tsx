@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { STAGES, frameCount, frameUrl, stageAt, tiersFor } from "@/lib/sequence";
+import Link from "@/components/intent-link";
+import { STAGES, frameCount, stageAt, tiersFor, type SequenceTier } from "@/lib/sequence";
+import { streamFrames, type FrameStream } from "@/lib/frame-packs";
 import { useViewportWidth } from "@/hooks/use-device-type";
 
-/** Parallel requests while preloading. */
-const LANES = 8;
 /** The cutting sequence, rough to finished stone. */
 const INTRO_MS = 16_000;
 /** One full turn of the finished stone. */
@@ -201,46 +200,36 @@ export function HeroSequence() {
 
     /* -- loading */
 
-    const fetchFrame = (url: string) =>
-      new Promise<HTMLImageElement | null>((resolve) => {
-        const img = new Image();
-        img.decoding = "async";
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = url;
+    // Frames come in packs, shared with any other player on the page (see
+    // lib/frame-packs.ts): the intro first, then the turn.
+    const streams: FrameStream[] = [];
+    const stream = async (store: FrameStore, tier: SequenceTier, onEach?: () => void) => {
+      const frames = streamFrames(tier, (i, img) => {
+        store.images[i] = img;
+        onEach?.();
       });
-
-    const fetchAll = async (store: FrameStore, tier: typeof tiers.intro, first: number, onEach?: () => void) => {
-      const queue = Array.from({ length: store.count - first }, (_, k) => k + first);
-      await Promise.all(
-        Array.from({ length: LANES }, async () => {
-          while (queue.length && !cancelled) {
-            const i = queue.shift() as number;
-            // One retry: a gap holds intro playback until loading finishes.
-            store.images[i] = (await fetchFrame(frameUrl(tier, i))) ?? (await fetchFrame(frameUrl(tier, i)));
-            onEach?.();
-          }
-        }),
-      );
+      streams.push(frames);
+      await frames.done;
       // Frames that failed twice borrow a neighbour, so playback can pass them.
       store.images = store.images.map((img, i, all) => img ?? all[i - 1] ?? all.find(Boolean) ?? null);
     };
 
     const load = async () => {
-      const first = await fetchFrame(frameUrl(tiers.intro, 0));
-      if (cancelled) return;
-      intro.images[0] = first;
-      contiguous = first ? 1 : 0;
-      redraw();
-      setReady(true);
-      await fetchAll(intro, tiers.intro, 1, () => {
+      let shown = false;
+      await stream(intro, tiers.intro, () => {
         while (contiguous < intro.count && intro.images[contiguous]) contiguous++;
+        // The first frame to arrive goes up at once, before the rest.
+        if (!shown && !cancelled) {
+          shown = true;
+          redraw();
+          setReady(true);
+        }
       });
       if (cancelled) return;
       if (intro.images.every(Boolean)) contiguous = intro.count;
       // The turn comes second, well before the intro reaches it on any
       // reasonable connection.
-      await fetchAll(loop, tiers.loop, 0);
+      await stream(loop, tiers.loop);
       if (cancelled) return;
       // Play only once every frame is in; a half-loaded turn reads as stutter.
       loopReady = loop.images.every(Boolean);
@@ -320,6 +309,7 @@ export function HeroSequence() {
 
     return () => {
       cancelled = true;
+      streams.forEach((frames) => frames.cancel());
       stop();
       io.disconnect();
       ro.disconnect();

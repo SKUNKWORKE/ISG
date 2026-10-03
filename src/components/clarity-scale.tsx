@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { CountLink } from "./color-scale";
 import {
   CLARITY_CATEGORIES,

@@ -46,6 +46,7 @@ import json
 import re
 import sys
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -55,6 +56,8 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src" / "data" / "stones"
+# The date the stock lists last changed, for the stone sitemaps' <lastmod>.
+UPDATED_FILE = ROOT / "src" / "data" / "stock-updated.json"
 EXISTING_TS = [ROOT / "src/lib/real-stones.ts", ROOT / "src/lib/real-natural-stones.ts"]
 
 # Column names per field. Suppliers label the same thing differently; the first
@@ -381,6 +384,11 @@ def main(paths):
         print(f"{path.name} -> {out.relative_to(ROOT)}: {by_origin['lab']} lab-grown, {by_origin['natural']} natural")
         for reason, n in sorted(skipped.items(), key=lambda kv: -kv[1]):
             print(f"    left out {n:>6}  {reason}")
+
+    if outputs:
+        today = datetime.now(timezone.utc).date().isoformat()
+        UPDATED_FILE.write_text(json.dumps({"updated": today}) + "\n")
+        print(f"{UPDATED_FILE.relative_to(ROOT)}: stock dated {today}")
 
 
 if __name__ == "__main__":

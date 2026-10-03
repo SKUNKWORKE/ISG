@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { useHydrated } from "@/hooks/use-shortlist";

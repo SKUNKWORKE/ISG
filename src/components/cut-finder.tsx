@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { useId, useState } from "react";
 import { SHOPPABLE_CUTS, cutCatalogueHref, cutEnquiryHref } from "@/lib/cut-grades";
 import { SHAPES, SHAPE_BY_SLUG, type ShapeSlug } from "@/lib/shapes";
