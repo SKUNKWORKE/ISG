@@ -96,11 +96,7 @@ require("./server.js");
 
 /* ----------------------------------------------------------------- static */
 
-await cp(path.join(ROOT, "public"), STATIC, {
-  recursive: true,
-  // The resize script's bookkeeping, not something to serve.
-  filter: (src) => path.relative(path.join(ROOT, "public"), src) !== path.join("_img", "manifest.json"),
-});
+await cp(path.join(ROOT, "public"), STATIC, { recursive: true });
 await cp(path.join(ROOT, ".next", "static"), path.join(STATIC, "_next", "static"), { recursive: true });
 
 /* --------------------------------------------------------------- manifest */

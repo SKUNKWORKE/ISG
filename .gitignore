@@ -17,6 +17,9 @@ next-env.d.ts
 # Amplify deployment bundle, made by scripts/package-amplify.mjs
 /.amplify-hosting/
 
+# Vercel CLI project link and `vercel build` output
+/.vercel/
+
 # raw frame sequences — one-time build inputs (see README)
 /assets/sequence/raw-700/
 /assets/sequence/raw-360/

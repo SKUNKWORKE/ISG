@@ -34,6 +34,6 @@ frontend:
   cache:
     paths:
       - .npm/**/*
+      # Includes the resized jewelry photos (scripts/build-images.mjs), so only
+      # changed photos are redone.
       - .next/cache/**/*
-      # Resized jewelry photos: kept between builds so only changed photos are redone.
-      - public/_img/**/*
