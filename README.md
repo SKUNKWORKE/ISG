@@ -411,8 +411,10 @@ down from 275 MB, most of it prerendered pages. What keeps it there:
   committed), and [`image-loader.ts`](src/lib/image-loader.ts) points
   `next/image` at those files. The CDN serves photos directly, and the server
   carries no image library. The first build resizes 1,750 photos to six widths
-  in about five minutes; after that `amplify.yml` restores them from cache,
-  and only changed photos are redone. (WebP rather than the AVIF Next's
+  in about six minutes on a 2-core build machine. The sizes are kept in
+  `.next/cache/images/`, which Vercel and `amplify.yml` both restore on the
+  next build, so after that only changed photos are redone and the step takes
+  seconds. (WebP rather than the AVIF Next's
   optimizer negotiated per browser: static files can't negotiate, and WebP
   works on every browser the site supports.)
 - **Stone sitemaps** hold 20,000 URLs each (about 3.5 MB).
