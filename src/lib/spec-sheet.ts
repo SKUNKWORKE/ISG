@@ -96,7 +96,7 @@ export function renderCatalogueSheet({
   summary,
   preparedAt,
 }: {
-  stones: Stone[];
+  stones: readonly Stone[];
   origin: Origin;
   summary: string;
   preparedAt: Date;

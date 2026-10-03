@@ -44,41 +44,38 @@ const PAGE = 12;
 /** The stone Catalog's layout and behaviour, filtered on jewelry's own attributes. */
 export function JewelryCatalog({
   items,
-  initialQuery = "",
   notice,
 }: {
   items: JewelSummary[];
-  /**
-   * The query the server rendered, e.g. `type=ring`; empty on the prerendered
-   * page. Filters and sort round-trip through the address bar, whose own query
-   * is applied once the page is in the browser.
-   */
-  initialQuery?: string;
   notice?: string;
 }) {
   const bounds = useMemo(() => jewelryBounds(items), [items]);
   const empty = useMemo(() => emptyJewelryFilters(bounds), [bounds]);
-  const [initial] = useState(() => jewelryFiltersFromParams(new URLSearchParams(initialQuery), bounds));
+  // The prerendered page is unfiltered. Filters and sort round-trip through
+  // the address bar, whose own query is applied once the page is in the browser.
+  const [initial] = useState(() => jewelryFiltersFromParams(new URLSearchParams(), bounds));
 
   const [filters, setFilters] = useState<JewelryFilters>(initial.filters);
   const [sort, setSortState] = useState<Sort>(initial.sort);
   const [visible, setVisible] = useState(PAGE);
 
   // The page is prerendered without filters so the CDN can serve it whole; a
-  // filtered address is applied here, once in the browser. Filtering runs
-  // locally, so its results are on screen in the same pass and the pre-paint
-  // dimming can go at once.
+  // filtered address (`?type=ring`) is applied here, once in the browser.
   const [addressRead, setAddressRead] = useState(false);
   useEffect(() => {
     const wanted = new URLSearchParams(window.location.search);
-    if (wanted.toString() !== initialQuery) {
+    if (wanted.toString()) {
       const next = jewelryFiltersFromParams(wanted, bounds);
       setFilters(next.filters);
       setSortState(next.sort);
     }
     setAddressRead(true);
-    document.documentElement.removeAttribute(CATALOG_PENDING_ATTRIBUTE);
-  }, [bounds, initialQuery]);
+  }, [bounds]);
+  // Filtering runs locally, so the render that marks the address read already
+  // shows its results; the pre-paint dimming goes once that is committed.
+  useEffect(() => {
+    if (addressRead) document.documentElement.removeAttribute(CATALOG_PENDING_ATTRIBUTE);
+  }, [addressRead]);
 
   const update = useCallback((change: (prev: JewelryFilters) => JewelryFilters) => {
     setFilters(change);
@@ -258,19 +255,21 @@ export function JewelryCatalog({
             </p>
           </div>
         ) : (
-          <m.div
-            key={signature}
-            data-catalog-results=""
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
-            className="mt-8"
-          >
-            <JewelryGrid
-              items={results.slice(0, visible)}
-              className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
-            />
-          </m.div>
+          // A plain wrapper for the pending dimming, as in Catalog: the motion
+          // element leaves `opacity` inline, which would override it.
+          <div data-catalog-results="" className="mt-8 transition-opacity duration-200">
+            <m.div
+              key={signature}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
+            >
+              <JewelryGrid
+                items={results.slice(0, visible)}
+                className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
+              />
+            </m.div>
+          </div>
         )}
 
         {visible < results.length ? (

@@ -60,26 +60,23 @@ export function Catalog({
   origin,
   summary,
   firstPage,
-  initialQuery = "",
   notice,
 }: {
   origin: Origin;
   /** The whole stock list in brief; the stones themselves stay on the server. */
   summary: CatalogSummary;
-  /** Results for `initialQuery`, rendered on the server so the first view needs no request. */
-  firstPage: CatalogPage;
   /**
-   * The query `firstPage` answers; empty on the prerendered pages. Every
-   * filter and the sort round-trip through the address bar, so guide links
-   * (`?color=D,E`), shared URLs and the PDF sheet all agree: the address's own
-   * query is applied once the page is in the browser (see below).
+   * The unfiltered first page, prerendered so the first view needs no
+   * request. Every filter and the sort round-trip through the address bar, so
+   * guide links (`?color=D,E`), shared URLs and the PDF sheet all agree: the
+   * address's own query is applied once the page is in the browser (see below).
    */
-  initialQuery?: string;
+  firstPage: CatalogPage;
   notice?: string;
 }) {
   const { bounds, total, hasDates, hasFancy, hasLowerColors } = summary;
   const empty = useMemo(() => emptyFilters(bounds), [bounds]);
-  const [initial] = useState(() => filtersFromParams(new URLSearchParams(initialQuery), bounds));
+  const [initial] = useState(() => filtersFromParams(new URLSearchParams(), bounds));
 
   const [filters, setFilters] = useState<Filters>(initial.filters);
   const [sort, setSortState] = useState<Sort>(initial.sort);
@@ -99,13 +96,13 @@ export function Catalog({
   const [addressRead, setAddressRead] = useState(false);
   useEffect(() => {
     const wanted = new URLSearchParams(window.location.search);
-    if (wanted.toString() !== initialQuery) {
+    if (wanted.toString()) {
       const next = filtersFromParams(wanted, bounds);
       setFilters(next.filters);
       setSortState(next.sort);
     }
     setAddressRead(true);
-  }, [bounds, initialQuery]);
+  }, [bounds]);
 
   const [failedQuery, setFailedQuery] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -411,20 +408,25 @@ export function Catalog({
             </p>
           </div>
         ) : (
-          <m.div
-            key={signature}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
+          // The dimming sits on a plain wrapper: the motion element's entry
+          // animation leaves `opacity` inline, which would override a class.
+          <div
             aria-busy={loading}
             data-catalog-results=""
             className={`mt-8 transition-opacity duration-200 ${loading ? "opacity-50" : ""}`}
           >
-            <StoneGrid
-              stones={loaded.stones}
-              className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
-            />
-          </m.div>
+            <m.div
+              key={signature}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
+            >
+              <StoneGrid
+                stones={loaded.stones}
+                className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
+              />
+            </m.div>
+          </div>
         )}
 
         {loaded.stones.length < loaded.count ? (

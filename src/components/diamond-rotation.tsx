@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MOBILE_TIER_MAX_WIDTH, frameCount, type SequenceTier } from "@/lib/sequence";
+import { frameCount, tiersFor } from "@/lib/sequence";
 import { streamFrames, type FrameStream } from "@/lib/frame-packs";
 
 /** Playback rate. At 24 fps the 167-frame turn takes about seven seconds, as in the hero. */
@@ -117,8 +117,9 @@ export function DiamondRotation({ label, className }: { label: string; className
     if (!root) return;
 
     imagesRef.current = new Array(count).fill(null);
-    // Both turntable tiers hold the same frames; narrow screens fetch the smaller one.
-    const tier: SequenceTier = window.innerWidth <= MOBILE_TIER_MAX_WIDTH ? "rotate-mobile" : "rotate";
+    // Both turntable tiers hold the same frames; narrow screens fetch the smaller
+    // one. Chosen as the hero chooses its turn, so the two share one download.
+    const tier = tiersFor(window.innerWidth).loop;
     let frames: FrameStream | null = null;
     let done = 0;
 

@@ -39,7 +39,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orig
 
   const pdf = renderCatalogueSheet({
     // Usually the list on screen when the link was clicked, so already sorted.
-    stones: matchingStones(origin, search),
+    stones: matchingStones(origin, filters, sort),
     origin,
     summary: describeFilters(filters, sort, bounds),
     preparedAt,
