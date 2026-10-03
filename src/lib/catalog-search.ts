@@ -68,10 +68,12 @@ function cachedResult(origin: Origin, filters: Filters, sort: Sort, bounds: Boun
   return result;
 }
 
-/** Every stone matching `params`, in the requested order. */
-export function matchingStones(origin: Origin, params: URLSearchParams): Stone[] {
+/**
+ * Every stone matching `filters`, in `sort` order. Read-only: it is the cached
+ * list itself, shared with every later request for the same search.
+ */
+export function matchingStones(origin: Origin, filters: Filters, sort: Sort): readonly Stone[] {
   const { bounds } = catalogSummary(origin);
-  const { filters, sort } = filtersFromParams(params, bounds);
   return cachedResult(origin, filters, sort, bounds).matched;
 }
 

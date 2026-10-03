@@ -22,7 +22,8 @@ import { PACKS, frameCount, frameUrl, packUrl, type SequenceTier } from "./seque
  *
  * Every frame is reported exactly once: as an image, or as null when it could
  * not be loaded even on a second try. When the last player stops listening,
- * downloads stop; the frames already in are kept for the next one.
+ * downloads stop; the frames already in are kept for the next one, and the
+ * ones that failed are tried again when it attaches.
  */
 
 /** A frame: its image, null when it failed, undefined while still to come. */
@@ -125,6 +126,18 @@ class TierLoader {
   }
 
   attach(listener: Listener) {
+    // Frames that failed on an earlier visit get another try, rather than
+    // leaving every later player blank for the rest of the session after one
+    // bad connection. Only while idle: a running load has already reported
+    // them to the listeners it has.
+    if (!this.controller) {
+      this.slots.forEach((slot, i) => {
+        if (slot === null) {
+          this.slots[i] = undefined;
+          this.settled--;
+        }
+      });
+    }
     // Whatever is already in, in order, before anything new arrives.
     this.slots.forEach((slot, i) => {
       if (slot !== undefined) listener.onFrame(i, slot);

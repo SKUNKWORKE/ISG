@@ -28,7 +28,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const ROOT = process.cwd();
@@ -85,7 +85,12 @@ for (const [tier, { frames }] of Object.entries(tiers)) {
     header.writeUInt32LE(FORMAT, 4);
     header.writeUInt32LE(group.length, 8);
     group.forEach((frame, i) => header.writeUInt32LE(frame.length, 12 + i * 4));
-    await writeFile(path.join(target, `${String(p).padStart(3, "0")}.bin`), Buffer.concat([header, ...group]));
+    const file = path.join(target, `${String(p).padStart(3, "0")}.bin`);
+    const size = header.length + group.reduce((sum, frame) => sum + frame.length, 0);
+    // The folder name is a hash of the content, so a pack already there at the
+    // right size is this one; only a partly written file is redone.
+    if ((await stat(file).catch(() => null))?.size === size) continue;
+    await writeFile(file, Buffer.concat([header, ...group]));
     written++;
   }
   manifest.tiers[tier] = { hash, packs };
@@ -102,4 +107,4 @@ if ((await readFile(MANIFEST, "utf8").catch(() => "")) !== json) await writeFile
 const summary = Object.entries(manifest.tiers)
   .map(([tier, { packs }]) => `${tier} ${packs}`)
   .join(", ");
-console.log(`[packs] ${written} packs of up to ${FRAMES_PER_PACK} frames (${summary})`);
+console.log(`[packs] ${written} packs written, of up to ${FRAMES_PER_PACK} frames (${summary})`);

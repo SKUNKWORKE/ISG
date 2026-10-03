@@ -480,13 +480,3 @@ export function describeFilters(filters: Filters, sort: Sort, bounds: Bounds): s
   const scope = parts.length ? `Filtered to ${parts.join("  •  ")}` : "Full catalogue, no filters";
   return `${scope}  •  Sorted ${SORTS[sort].toLowerCase()}`;
 }
-
-/** The page's `searchParams` as a query string, for `initialQuery`. */
-export function toQueryString(params: Record<string, string | string[] | undefined>) {
-  const out = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    const first = Array.isArray(value) ? value[0] : value;
-    if (first !== undefined) out.set(key, first);
-  }
-  return out.toString();
-}
