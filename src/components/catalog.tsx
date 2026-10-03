@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { m } from "framer-motion";
 import { StoneGrid } from "./stone-grid";
+import { CATALOG_PENDING_ATTRIBUTE } from "./catalog-address-script";
 import {
   ActiveFilters,
   ChipSet,
@@ -68,8 +69,10 @@ export function Catalog({
   /** Results for `initialQuery`, rendered on the server so the first view needs no request. */
   firstPage: CatalogPage;
   /**
-   * The page's query string. Every filter and the sort round-trip through it,
-   * so guide links (`?color=D,E`), shared URLs and the PDF sheet all agree.
+   * The query `firstPage` answers; empty on the prerendered pages. Every
+   * filter and the sort round-trip through the address bar, so guide links
+   * (`?color=D,E`), shared URLs and the PDF sheet all agree: the address's own
+   * query is applied once the page is in the browser (see below).
    */
   initialQuery?: string;
   notice?: string;
@@ -89,6 +92,21 @@ export function Catalog({
     stones: firstPage.stones,
     counts: firstPage.counts ?? ({} as FacetCounts),
   }));
+  // The pages are prerendered without filters so the CDN can serve them whole.
+  // A filtered address is applied here, once in the browser, and its results
+  // fetched like any other filter change. Until then the address bar is left
+  // alone, so the filters aren't wiped from it before they have been read.
+  const [addressRead, setAddressRead] = useState(false);
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search);
+    if (wanted.toString() !== initialQuery) {
+      const next = filtersFromParams(wanted, bounds);
+      setFilters(next.filters);
+      setSortState(next.sort);
+    }
+    setAddressRead(true);
+  }, [bounds, initialQuery]);
+
   const [failedQuery, setFailedQuery] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [more, setMore] = useState<"idle" | "loading" | "failed">("idle");
@@ -116,6 +134,13 @@ export function Catalog({
   }, [origin, query, loaded.query, attempt]);
 
   const loading = query !== loaded.query && failedQuery !== query;
+
+  // The pre-paint script dims a filtered address's list until this point, or
+  // until the visitor leaves before it arrives.
+  useEffect(() => {
+    if (addressRead && !loading) document.documentElement.removeAttribute(CATALOG_PENDING_ATTRIBUTE);
+  }, [addressRead, loading]);
+  useEffect(() => () => document.documentElement.removeAttribute(CATALOG_PENDING_ATTRIBUTE), []);
 
   function retry() {
     setFailedQuery(null);
@@ -169,11 +194,12 @@ export function Catalog({
 
   // Keep the address bar in step so the current view can be bookmarked or shared.
   useEffect(() => {
+    if (!addressRead) return;
     const url = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
     if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
       window.history.replaceState(window.history.state, "", url);
     }
-  }, [query]);
+  }, [query, addressRead]);
 
   function remove(id: string) {
     const item = active.find((a) => a.id === id);
@@ -342,7 +368,7 @@ export function Catalog({
 
       <div>
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-hairline pb-5">
-          <p aria-live="polite" className="text-[15px]">
+          <p aria-live="polite" className="text-[15px]" data-catalog-results="">
             {loaded.count.toLocaleString()} {loaded.count === 1 ? "stone" : "stones"}
             {loaded.count !== total ? (
               <span className="text-ink-muted"> of {total.toLocaleString()}</span>
@@ -352,6 +378,7 @@ export function Catalog({
           {loaded.count > 0 ? (
             <a
               href={sheetHref}
+              rel="nofollow"
               download
               className="text-[13px] text-ink-muted underline underline-offset-4 transition-colors duration-200 hover:text-ink"
             >
@@ -390,6 +417,7 @@ export function Catalog({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
             aria-busy={loading}
+            data-catalog-results=""
             className={`mt-8 transition-opacity duration-200 ${loading ? "opacity-50" : ""}`}
           >
             <StoneGrid

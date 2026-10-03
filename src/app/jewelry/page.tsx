@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { JewelryCatalog } from "@/components/jewelry-catalog";
+import { CatalogAddressScript } from "@/components/catalog-address-script";
 import { JsonLd } from "@/components/json-ld";
 import { breadcrumbs, collectionPage } from "@/lib/structured-data";
-import { toQueryString } from "@/lib/catalog-filter";
 import { JEWELRY_SUMMARIES } from "@/lib/real-jewelry";
 import { INVENTORY_NOTICE } from "@/lib/stones";
 
@@ -16,12 +16,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/jewelry" },
 };
 
-export default async function JewelryPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const initialQuery = toQueryString(await searchParams);
+/**
+ * Static: prerendered once and served from the CDN. Filters in the address
+ * (`?type=ring`) are applied by the catalogue in the browser.
+ */
+export default function JewelryPage() {
 
   const jsonLd = [
     collectionPage({
@@ -59,9 +58,9 @@ export default async function JewelryPage({
       </section>
 
       <section className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 sm:py-16">
+        <CatalogAddressScript />
         <JewelryCatalog
           items={JEWELRY_SUMMARIES}
-          initialQuery={initialQuery}
           notice={INVENTORY_NOTICE}
         />
       </section>

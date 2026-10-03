@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { ClarityFinder } from "@/components/clarity-finder";
 import { ClarityGradeTable, ClarityScale, Loupe } from "@/components/clarity-scale";
 import { ShapeGlyph } from "@/components/shape-glyph";

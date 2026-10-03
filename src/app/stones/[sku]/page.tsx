@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { notFound } from "next/navigation";
 import { StoneModel } from "@/components/stone-model";
 import { StoneEnquireButton } from "@/components/stone-enquire-button";
@@ -128,6 +128,7 @@ export default async function StonePage({ params }: Props) {
             <StoneEnquireButton stone={stone} />
             <ShortlistToggle stone={stone} variant="labelled" className="mt-3" />
             <Link
+              rel="nofollow"
               href={`/build-a-ring?stone=${encodeURIComponent(stone.sku)}`}
               className="mt-3 block w-full rounded-full border border-hairline px-7 py-3 text-center text-[15px] transition-colors duration-200 hover:border-ink"
             >
@@ -138,6 +139,7 @@ export default async function StonePage({ params }: Props) {
             </p>
             <a
               href={`/stones/${encodeURIComponent(stone.sku)}/spec-sheet`}
+              rel="nofollow"
               download
               className="mt-2 inline-block text-[13px] text-ink-muted underline underline-offset-4 transition-colors duration-200 hover:text-ink"
             >

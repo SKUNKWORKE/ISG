@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { CutFinder } from "@/components/cut-finder";
 import { CutGradeScale, CutGradeTable } from "@/components/light-path";
 import { ShapeGlyph } from "@/components/shape-glyph";

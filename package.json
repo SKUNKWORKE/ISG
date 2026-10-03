@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/pack-sequence.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "sequence:convert": "node scripts/convert-sequence.mjs",
+    "sequence:convert": "node scripts/convert-sequence.mjs && node scripts/pack-sequence.mjs",
+    "sequence:pack": "node scripts/pack-sequence.mjs",
     "jewelry:scrape": "node scripts/scrape-jewelry.mjs",
-    "prebuild": "node scripts/copy-flags.mjs && node scripts/build-images.mjs",
+    "prebuild": "node scripts/copy-flags.mjs && node scripts/pack-sequence.mjs && node scripts/build-images.mjs",
     "flags:copy": "node scripts/copy-flags.mjs",
     "images:build": "node scripts/build-images.mjs",
     "build:amplify": "npm run build && node scripts/package-amplify.mjs"

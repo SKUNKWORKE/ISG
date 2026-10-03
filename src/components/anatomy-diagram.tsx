@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/intent-link";
 
 /*
   A labelled profile of a round brilliant, drawn to explain the words a report

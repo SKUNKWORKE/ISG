@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "Contact",
   description:
     "Enquire about loose natural or lab-grown diamonds. Reach Imperial Star Gems by email, phone or WhatsApp, or send a specification and we will source to it.",
+  alternates: { canonical: "/contact" },
 };
 
 type SpecParams = {

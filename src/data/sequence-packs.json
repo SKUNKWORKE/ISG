@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "framesPerPack": 24,
+  "tiers": {
+    "scroll": {
+      "hash": "c280378e4a",
+      "packs": 15
+    },
+    "scroll-mobile": {
+      "hash": "11323e197d",
+      "packs": 15
+    },
+    "rotate": {
+      "hash": "812d7ff61f",
+      "packs": 7
+    },
+    "rotate-mobile": {
+      "hash": "e308dbb65c",
+      "packs": 7
+    }
+  }
+}

@@ -44,9 +44,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/contact", priority: 0.6 },
   ];
 
+  // No <lastmod> where there is no real date. Stamping the build time on every
+  // page announced the whole site as changed after each deploy, inviting a
+  // full re-crawl for nothing.
   return routes.map(({ path, priority, lastModified }) => ({
     url: `${BASE}${path}`,
-    lastModified: lastModified ?? new Date(),
+    ...(lastModified ? { lastModified } : {}),
     changeFrequency: "weekly" as const,
     priority,
   }));

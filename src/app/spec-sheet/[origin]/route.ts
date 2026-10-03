@@ -1,5 +1,5 @@
-import { describeFilters, filterStones, filtersFromParams } from "@/lib/catalog-filter";
-import { catalogSummary } from "@/lib/catalog-search";
+import { describeFilters, filtersFromParams } from "@/lib/catalog-filter";
+import { catalogSummary, matchingStones } from "@/lib/catalog-search";
 import {
   describeJewelryFilters,
   filterJewelry,
@@ -8,7 +8,6 @@ import {
 } from "@/lib/jewelry";
 import { JEWELRY_SUMMARIES } from "@/lib/real-jewelry";
 import { pdfResponse, renderCatalogueSheet, renderJewelryCatalogueSheet } from "@/lib/spec-sheet";
-import { stonesFor } from "@/lib/stones";
 
 export const runtime = "nodejs";
 
@@ -35,12 +34,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ orig
   const origin = slug === "natural" ? "natural" : slug === "lab-grown" ? "lab" : undefined;
   if (!origin) return new Response("Not found", { status: 404 });
 
-  const all = stonesFor(origin);
   const { bounds } = catalogSummary(origin);
   const { filters, sort } = filtersFromParams(search, bounds);
 
   const pdf = renderCatalogueSheet({
-    stones: filterStones(all, filters, sort, bounds),
+    // Usually the list on screen when the link was clicked, so already sorted.
+    stones: matchingStones(origin, search),
     origin,
     summary: describeFilters(filters, sort, bounds),
     preparedAt,

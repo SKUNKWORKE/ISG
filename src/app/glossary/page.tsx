@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { AnatomyDiagram } from "@/components/anatomy-diagram";
 import { GlossaryIndex } from "@/components/glossary-index";
 import { CATEGORIES, CATEGORY_ORDER, GLOSSARY } from "@/lib/glossary";

@@ -274,6 +274,15 @@ body {
   }
 }
 
+/*
+  A filtered catalogue address before its filters are applied: the prerendered
+  list is the unfiltered one, so it reads as loading. Set by
+  components/catalog-address-script.tsx, cleared by the catalogue.
+*/
+html[data-catalog-pending] [data-catalog-results] {
+  opacity: 0.5;
+}
+
 /* Stage captions cross-fade as the hero sequence moves between stages. */
 @keyframes fadeIn {
   from {

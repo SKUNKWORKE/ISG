@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { FooterUpdates } from "./footer-updates";
 import { PaymentBadge } from "./payment-badge";
 import { ShapeGlyph } from "./shape-glyph";

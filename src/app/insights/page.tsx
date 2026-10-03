@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { TOPICS, formatInsightDate, listInsights, type Insight } from "@/lib/insights";
 
 export const metadata: Metadata = {

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { ShapeGlyph } from "./shape-glyph";
 import { SHAPE_BY_SLUG } from "@/lib/shapes";
 import {

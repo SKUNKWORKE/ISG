@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { notFound } from "next/navigation";
 import { ShapeGlyph } from "@/components/shape-glyph";
 import { CaratSizeChart } from "@/components/carat-size-chart";

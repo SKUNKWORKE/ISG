@@ -47,8 +47,12 @@ cookie varies per visitor. The result is the same — the correct palette is in
 place before anything is drawn — without losing static generation.
 
 Only the first request from a new visitor is uncacheable (`private, no-store`,
-because it carries a `Set-Cookie`). Once the cookie exists the proxy does no
-work and the page is served from cache as normal.
+because it carries a `Set-Cookie`). Once the cookie exists the proxy isn't run
+at all: its matcher skips requests that carry the cookie, client-side
+navigations and prefetches, and crawlers, so the host never invokes it for
+them. A cookie past its one-day freshness but not yet expired is refreshed by
+`/api/geo`, which the client calls when it reads one. The theme sync and the
+badge share that one request, and its answer is kept for the browser tab.
 
 ## Setting up MaxMind GeoLite2 (optional)
 

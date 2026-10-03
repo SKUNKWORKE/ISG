@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { CaratFinder } from "@/components/carat-finder";
 import { CaratSizeChart, CaratSizeTable } from "@/components/carat-size-chart";
 import {

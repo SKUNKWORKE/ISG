@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { ShapeGlyph } from "@/components/shape-glyph";
 import { currencyLabel, formatOccasionDate } from "@/lib/seasonal/format";
 import { SHAPE_NAMES, type SeasonalLang } from "@/lib/seasonal/shape-names";

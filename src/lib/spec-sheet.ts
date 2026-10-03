@@ -380,7 +380,9 @@ export function pdfResponse(pdf: Buffer, stem: string, preparedAt: Date): Respon
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${safe}-${preparedAt.toISOString().slice(0, 10)}.pdf"`,
-      "Cache-Control": "public, max-age=3600",
+      // s-maxage lets the CDN answer a repeat download without rendering the
+      // PDF again. An hour, because the sheet is dated.
+      "Cache-Control": "public, max-age=3600, s-maxage=3600",
       // The HTML catalogue is the indexable version; the PDFs would only compete with it.
       "X-Robots-Tag": "noindex",
     },

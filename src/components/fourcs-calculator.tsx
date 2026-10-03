@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { useEffect, useId, useState } from "react";
 import { ShapeGlyph } from "./shape-glyph";
 import { SIZE_MODELS, faceUpSize, formatFaceUp } from "@/lib/carat-size";

@@ -23,7 +23,8 @@ re-running the conversion step.
 | `npm run build` | Production build (resizes jewelry photos first) |
 | `npm run build:amplify` | Production build packaged for AWS Amplify, in `.amplify-hosting/` |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run sequence:convert` | Rebuilds `public/sequence` from the raw PNGs |
+| `npm run sequence:convert` | Rebuilds `public/sequence` from the raw PNGs, then packs it |
+| `npm run sequence:pack` | Packs the frames for the players (also runs before every build and `dev`) |
 
 ---
 
@@ -104,6 +105,26 @@ home page downloads about 10 MB less.
 Frames are flattened onto the porcelain background (`#FAFAFA`) rather than
 keeping an alpha channel — they render on that ground everywhere.
 
+### Frame packs
+
+The players don't fetch frames one by one. Before every build (and `npm run
+dev`), [`scripts/pack-sequence.mjs`](scripts/pack-sequence.mjs) copies each
+tier's frames, byte for byte, into packs of 24 under
+`public/sequence/packs/<tier>-<hash>/` (generated, not committed), and records
+them in `src/data/sequence-packs.json` (committed). The hash covers the frames,
+so a new render gets new pack URLs and the immutable cache can't serve an old
+one.
+
+[`src/lib/frame-packs.ts`](src/lib/frame-packs.ts) loads a tier as: the first
+frame on its own, so something shows at once; then the packs, three at a time
+and in order, so the hero is fed from the front. Each tier is downloaded once
+per visit and shared: the hero's turn and the rotation section further down
+draw the same frames. A pack that fails twice, or a tier with no packs, falls
+back to the individual frame files, so a missing pack degrades to the old
+behaviour rather than a blank canvas.
+
+A home page visit makes 24 sequence requests instead of 518.
+
 ### Serving from a CDN
 
 Upload `public/sequence/` to an asset CDN (Cloudflare R2, Bunny, Vercel Blob,
@@ -113,8 +134,12 @@ S3+CloudFront) and set:
 NEXT_PUBLIC_SEQUENCE_BASE_URL=https://cdn.imperialstargems.com/sequence
 ```
 
-Every frame URL goes through `frameUrl()`, so that one variable moves both
-sequences. Unset, it falls back to the local `/sequence` folder.
+Every frame and pack URL goes through `frameUrl()` and `packUrl()`, so that one
+variable moves both sequences. Upload the folder after a build, so it includes
+`packs/`; the CDN must also send CORS headers for this site, since packs are
+read with `fetch()`. Without the packs or the CORS headers the players fall
+back to single frames, which still work. Unset, it falls back to the local
+`/sequence` folder.
 `next.config.ts` sets a one-year immutable cache header on that path.
 
 ### Scroll-driven hero
@@ -123,7 +148,7 @@ sequences. Unset, it falls back to the local `/sequence` folder.
   across six further viewport heights (seven in total).
 - Scroll progress maps to `Math.round(progress * (count - 1))`, and `drawImage`
   runs only when that index actually changes.
-- Frames load in batches of 48 across 8 lanes, started by an
+- Frames load as packs (see *Frame packs*), started by an
   `IntersectionObserver`. Frame 1 loads first and draws immediately; scrubbing
   ahead of the loader holds the nearest loaded frame rather than blanking, and the
   frame under the playhead always jumps the queue.
@@ -283,7 +308,9 @@ Rows from any other lab or with no certificate, rows missing a grade the
 catalogue needs, and stones already listed are left out, and the script
 prints how many and why. A blank fluorescence is kept and simply not shown.
 Report numbers, prices and locations are never copied; the workbook remains the
-lookup from SKU to report.
+lookup from SKU to report. It also writes today's date to
+`src/data/stock-updated.json`, which the stone sitemaps give as every stone's
+`<lastmod>` — commit it with the stock files.
 
 The supplier files are tables rather than lists of objects — a row per stone,
 with repeated words (shapes, grades, labs) stored once per file — which keeps
@@ -292,13 +319,39 @@ not imported: an import compiled them into several server bundles, 23 MB each.
 
 **At this size nothing ships whole to the browser.** The stock module is
 `server-only`; client code imports types and grade lists from
-[`stone-vocabulary.ts`](src/lib/stone-vocabulary.ts). The catalogue pages render
-their first twelve results on the server, and every filter change after that
-asks `GET /api/stones` for one page of results plus the filter counts
-([`catalog-search.ts`](src/lib/catalog-search.ts)). Stone pages are built on
+[`stone-vocabulary.ts`](src/lib/stone-vocabulary.ts). The catalogue pages are
+prerendered with their first twelve unfiltered results, and every filter change
+after that — including the filters in a shared or guide link, applied once the
+page loads — asks `GET /api/stones` for one page of results plus the filter
+counts ([`catalog-search.ts`](src/lib/catalog-search.ts)). Stone pages are built on
 their first visit rather than at build time, stone URLs have their own sitemaps
 (`/stones/sitemap/<n>.xml`, listed in `robots.txt`), and a catalogue spec sheet
 lists at most the first 1,000 matching stones.
+
+---
+
+## Request and render budget
+
+Every request to the site counts against the host's allowances, and a server
+render counts several times over: a function invocation, CPU time, origin
+transfer and, for stone pages, cache writes. The site holds tens of thousands of
+pages, so the defaults that are harmless on a small site added up quickly. What
+keeps it in check:
+
+| | What it does | Where |
+|---|---|---|
+| Proxy only on a first visit | The geo proxy's matcher skips any request carrying the geo cookie, any client-side navigation or prefetch, and crawlers. A skipped request never invokes the function. It used to run on every page view and every prefetch. | [`proxy.ts`](src/proxy.ts) |
+| Prefetch on intent | Site links import [`intent-link.tsx`](src/components/intent-link.tsx) rather than `next/link`. It prefetches when a link is hovered, focused or touched, not when it scrolls into view. Previously a page load prefetched 19–35 routes, each one a server request. | every `Link` |
+| Static catalogues | `/natural-diamonds`, `/lab-grown-diamonds` and `/jewelry` don't read their query string, so they are prerendered and served from the CDN. Filters in the address are applied in the browser; [`catalog-address-script.tsx`](src/components/catalog-address-script.tsx) dims the list until they are. | catalogue pages |
+| Cached search | `/api/stones` answers depend only on the URL, so the CDN keeps them for a day (`s-maxage`); a deploy starts the cache afresh. On the server, recent searches are kept sorted in memory, so "Show more" and the spec sheet don't filter the whole stock again. | [`api/stones`](src/app/api/stones/route.ts), [`catalog-search.ts`](src/lib/catalog-search.ts) |
+| Frame packs | 24 requests per home page visit instead of 518. | *Frame packs* above |
+| One geo lookup | The theme and the badge share one `/api/geo` request per page load, and the answer is kept for the browser tab, including an empty one. | [`use-visitor-country.ts`](src/hooks/use-visitor-country.ts) |
+| Crawl limits | `robots.txt` closes the per-request URLs with no end to them: catalogue, jewelry, builder and contact query strings, and the PDF spec sheets. The ring builder alone paged through every stone in stock. SEO-tool crawlers get a crawl delay, and links into those URLs carry `rel="nofollow"`. Every indexable page stays open. | [`robots.ts`](src/app/robots.ts) |
+| Honest sitemaps | `<lastmod>` is the stock date, not the build time, so a deploy no longer tells crawlers that all 73,602 stone pages changed. | [`stones/sitemap.ts`](src/app/stones/sitemap.ts), [`sitemap.ts`](src/app/sitemap.ts) |
+
+Two settings that live in the Vercel dashboard rather than the repository are
+worth turning on as well: **Firewall → Bot Protection** and **AI Bots** (both
+free). They stop crawlers that ignore `robots.txt` before they reach a function.
 
 ---
 
@@ -450,6 +503,7 @@ assets/sequence/raw-360/      333-frame turntable PNGs, gitignored — to be sup
 scripts/convert-sequence.mjs  PNG -> WebP tiers + manifest
 scripts/import-stones.py      Supplier stock workbooks -> src/data/stones/*.json
 scripts/build-images.mjs      Jewelry photos -> public/_img/ at fixed widths (every build)
+scripts/pack-sequence.mjs     Frame sequences -> public/sequence/packs/ (every build and dev)
 scripts/package-amplify.mjs   next build output -> .amplify-hosting/ for AWS Amplify
 amplify.yml                   Amplify build settings
 public/sequence/              scroll/, scroll-mobile/, rotate/

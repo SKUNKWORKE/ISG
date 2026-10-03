@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { redirect } from "next/navigation";
 import { RingBuilderReview } from "@/components/ring-builder-review";
 import { SavedBuilds } from "@/components/saved-builds";
@@ -317,7 +317,7 @@ function StoneStep({ params, design }: { params: BuildParams; design?: SettingDe
                     Details<span className="sr-only"> for {s.sku}</span>
                   </Link>
                   <Link
-                    href={builderHref(params, {
+                    rel="nofollow" href={builderHref(params, {
                       stone: s.sku,
                       shape: undefined,
                       origin: undefined,
@@ -342,7 +342,7 @@ function StoneStep({ params, design }: { params: BuildParams; design?: SettingDe
         {pages > 1 ? (
           <nav aria-label="Pages" className="mt-8 flex items-center justify-between text-[14px]">
             {page > 1 ? (
-              <Link href={builderHref(params, { page: String(page - 1) })} className="underline underline-offset-4">
+              <Link rel="nofollow" href={builderHref(params, { page: String(page - 1) })} className="underline underline-offset-4">
                 Previous
               </Link>
             ) : (
@@ -352,7 +352,7 @@ function StoneStep({ params, design }: { params: BuildParams; design?: SettingDe
               Page {page} of {pages}
             </span>
             {page < pages ? (
-              <Link href={builderHref(params, { page: String(page + 1) })} className="underline underline-offset-4">
+              <Link rel="nofollow" href={builderHref(params, { page: String(page + 1) })} className="underline underline-offset-4">
                 Next
               </Link>
             ) : (
@@ -378,7 +378,7 @@ function DesignSummary({ design, params }: { design: SettingDesign; params: Buil
         <p className="text-[12px] text-ink-muted">Your setting</p>
         <p className="truncate text-[15px]">{STYLE_NAME[design.style]}</p>
         <Link
-          href={builderHref(params, { setting: undefined })}
+          rel="nofollow" href={builderHref(params, { setting: undefined })}
           className="text-[12px] text-ink-muted underline underline-offset-4 hover:text-ink"
         >
           Change
@@ -415,11 +415,11 @@ function SettingStep({ params, stone }: { params: BuildParams; stone: Stone }) {
         </div>
         {styles.length > 1 ? (
           <nav aria-label="Setting style" className="flex flex-wrap gap-2">
-            <Link href={builderHref(params, { style: undefined })} aria-current={!style ? "true" : undefined} className={chip(!style)}>
+            <Link rel="nofollow" href={builderHref(params, { style: undefined })} aria-current={!style ? "true" : undefined} className={chip(!style)}>
               All <span className="tabular-nums opacity-70">{all.length}</span>
             </Link>
             {styles.map((s) => (
-              <Link key={s} href={builderHref(params, { style: s })} aria-current={style === s ? "true" : undefined} className={chip(style === s)}>
+              <Link key={s} rel="nofollow" href={builderHref(params, { style: s })} aria-current={style === s ? "true" : undefined} className={chip(style === s)}>
                 {STYLE_NAME[s]}{" "}
                 <span className="tabular-nums opacity-70">{all.filter((d) => d.style === s).length}</span>
               </Link>
@@ -466,7 +466,7 @@ function SettingStep({ params, stone }: { params: BuildParams; stone: Stone }) {
             </p>
           </div>
           <Link
-            href={builderHref(params, { setting: CUSTOM, style: undefined })}
+            rel="nofollow" href={builderHref(params, { setting: CUSTOM, style: undefined })}
             className="mt-6 rounded-full border border-ink px-5 py-2.5 text-center text-[14px] transition-colors duration-200 hover:bg-ink hover:text-white"
           >
             Ask for a design

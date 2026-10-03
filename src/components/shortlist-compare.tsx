@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { useState } from "react";
 import { ShapeGlyph } from "./shape-glyph";
 import { useHydrated, useShortlist } from "@/hooks/use-shortlist";

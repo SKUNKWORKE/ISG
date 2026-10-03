@@ -5,6 +5,7 @@ import { guessFromBrowser } from "@/lib/geo/browser";
 import { decodeGeoCookie, GEO_COOKIE } from "@/lib/geo/cookie";
 import { countryName } from "@/lib/geo/countries";
 import { getSeasonalTheme } from "@/lib/geo/season";
+import { GEO_CACHE_TTL_SECONDS } from "@/lib/geo/constants";
 import { UNKNOWN_VISITOR, type GeoResponse, type ThemeName, type VisitorCountry } from "@/lib/geo/types";
 
 /**
@@ -58,6 +59,63 @@ function writeStored(country: VisitorCountry) {
   } catch {
     // Storage being unavailable is not a reason to fail; the cookie still works.
   }
+}
+
+/**
+ * The /api/geo answer for this tab, including an empty one.
+ *
+ * An empty or browser-hinted answer is never written to the cookie or to
+ * localStorage, so without this every full page load in the session asked the
+ * server again for an answer it had already said it didn't have.
+ */
+const SESSION_KEY = "isg:geo-answer";
+
+function readSessionAnswer(): GeoResponse | null {
+  try {
+    const raw = window.sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { data?: GeoResponse; at?: number };
+    if (!parsed?.data || typeof parsed.at !== "number") return null;
+    if (Date.now() - parsed.at > GEO_CACHE_TTL_SECONDS * 1000) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionAnswer(data: GeoResponse) {
+  try {
+    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify({ data, at: Date.now() }));
+  } catch {
+    // Same as writeStored: an unavailable store only costs a repeat request.
+  }
+}
+
+/**
+ * One request per page load, shared by every component using the hook — the
+ * theme sync and the badge both mount in the root layout and used to ask
+ * separately.
+ */
+let inflight: Promise<GeoResponse | null> | null = null;
+
+function requestGeo(params: URLSearchParams): Promise<GeoResponse | null> {
+  if (!inflight) {
+    const remembered = readSessionAnswer();
+    inflight = remembered
+      ? Promise.resolve(remembered)
+      : fetch(`/api/geo?${params}`, { credentials: "same-origin" })
+          .then((response) => (response.ok ? (response.json() as Promise<GeoResponse>) : null))
+          .then((data) => {
+            if (data) writeSessionAnswer(data);
+            return data;
+          })
+          .catch((error: unknown) => {
+            // Not remembered: the next page load may well be back online.
+            inflight = null;
+            throw error;
+          });
+  }
+  return inflight;
 }
 
 function readCookie(): VisitorCountry | null {
@@ -123,8 +181,7 @@ export function useVisitorCountry(): VisitorCountryState {
         }));
       };
 
-      fetch(`/api/geo?${params}`, { credentials: "same-origin" })
-        .then((response) => (response.ok ? (response.json() as Promise<GeoResponse>) : null))
+      requestGeo(params)
         .then((data) => {
           // An error status leaves whatever is on screen in place. It is read
           // through the updater because this closure's copy is stale by now.

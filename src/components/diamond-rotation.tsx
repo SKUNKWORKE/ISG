@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MOBILE_TIER_MAX_WIDTH, frameCount, frameUrl, type SequenceTier } from "@/lib/sequence";
+import { MOBILE_TIER_MAX_WIDTH, frameCount, type SequenceTier } from "@/lib/sequence";
+import { streamFrames, type FrameStream } from "@/lib/frame-packs";
 
 /** Playback rate. At 24 fps the 167-frame turn takes about seven seconds, as in the hero. */
 const FPS = 24;
-/** Parallel image requests while preloading. */
-const LANES = 6;
 /** After a drag or key scrub, wait this long before autoplay picks back up. */
 const RESUME_AFTER_MS = 1800;
 
@@ -29,8 +28,6 @@ const wrap = (n: number, count: number) => ((n % count) + count) % count;
  */
 export function DiamondRotation({ label, className }: { label: string; className?: string }) {
   const count = frameCount("rotate");
-  // Both turntable tiers hold the same frames; narrow screens fetch the smaller one.
-  const tierRef = useRef<SequenceTier>("rotate");
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sliderRef = useRef<HTMLDivElement | null>(null);
@@ -120,44 +117,23 @@ export function DiamondRotation({ label, className }: { label: string; className
     if (!root) return;
 
     imagesRef.current = new Array(count).fill(null);
-    tierRef.current = window.innerWidth <= MOBILE_TIER_MAX_WIDTH ? "rotate-mobile" : "rotate";
-    let cancelled = false;
-    let started = false;
+    // Both turntable tiers hold the same frames; narrow screens fetch the smaller one.
+    const tier: SequenceTier = window.innerWidth <= MOBILE_TIER_MAX_WIDTH ? "rotate-mobile" : "rotate";
+    let frames: FrameStream | null = null;
     let done = 0;
 
-    const load = (i: number) =>
-      new Promise<void>((resolve) => {
-        const img = new Image();
-        img.decoding = "async";
-        const finish = () => {
-          done++;
-          // Re-render in steps, not once per frame.
-          if (!cancelled && (done % 12 === 0 || done === count)) setSettled(done);
-          resolve();
-        };
-        img.onload = () => {
-          if (!cancelled) {
-            imagesRef.current[i] = img;
-            if (drawnRef.current < 0 || i === indexRef.current) draw(indexRef.current);
-          }
-          finish();
-        };
-        img.onerror = finish;
-        img.src = frameUrl(tierRef.current, i);
+    // Frames arrive in packs, shared with the hero's turn on the home page
+    // (see lib/frame-packs.ts); whatever is already in memory arrives at once.
+    const preload = () =>
+      streamFrames(tier, (i, img) => {
+        done++;
+        if (img) {
+          imagesRef.current[i] = img;
+          if (drawnRef.current < 0 || i === indexRef.current) draw(indexRef.current);
+        }
+        // Re-render in steps, not once per frame.
+        if (done % 12 === 0 || done === count) setSettled(done);
       });
-
-    const preload = async () => {
-      await load(0);
-      const queue = Array.from({ length: count - 1 }, (_, k) => k + 1);
-      await Promise.all(
-        Array.from({ length: LANES }, async () => {
-          while (queue.length && !cancelled) {
-            const next = queue.shift();
-            if (next !== undefined) await load(next);
-          }
-        }),
-      );
-    };
 
     // Doubles as the on-screen signal that gates the playback loop.
     const io = new IntersectionObserver(
@@ -170,18 +146,15 @@ export function DiamondRotation({ label, className }: { label: string; className
         // drawer's rotation never started loading.
         const entry = entries[entries.length - 1];
         setOnScreen(entry.isIntersecting);
-        if (entry.isIntersecting && !started) {
-          started = true;
-          void preload();
-        }
+        if (entry.isIntersecting && !frames) frames = preload();
       },
       { rootMargin: "400px 0px" },
     );
     io.observe(root);
 
     return () => {
-      cancelled = true;
       io.disconnect();
+      frames?.cancel();
     };
   }, [count, draw]);
 

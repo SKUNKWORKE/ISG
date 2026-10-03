@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { ShapeGlyph } from "./shape-glyph";
 import { ShortlistToggle } from "./shortlist-toggle";
 import { SHAPE_BY_SLUG } from "@/lib/shapes";

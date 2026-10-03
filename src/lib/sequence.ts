@@ -1,4 +1,5 @@
 import manifest from "@/data/sequence-manifest.json";
+import packManifest from "@/data/sequence-packs.json";
 
 /**
  * In development the converted frames are served from the app's own /public
@@ -48,6 +49,21 @@ export function frameUrl(tier: SequenceTier, index: number): string {
 
 export function frameCount(tier: SequenceTier): number {
   return SEQUENCE[tier].frames;
+}
+
+/**
+ * The same frames, packed a couple of dozen to a file by
+ * scripts/pack-sequence.mjs so a player makes a handful of requests rather
+ * than hundreds. src/lib/frame-packs.ts reads them.
+ */
+export const PACKS: { framesPerPack: number; tiers: Partial<Record<SequenceTier, { hash: string; packs: number }>> } =
+  packManifest;
+
+/** Pack `index` of a tier, or null when the tier was not packed. */
+export function packUrl(tier: SequenceTier, index: number): string | null {
+  const packed = PACKS.tiers[tier];
+  if (!packed || index >= packed.packs) return null;
+  return `${BASE}/packs/${tier}-${packed.hash}/${String(index).padStart(3, "0")}.bin`;
 }
 
 /**

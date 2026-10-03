@@ -8,9 +8,11 @@
 next-env.d.ts
 *.tsbuildinfo
 
-# generated on every build: scripts/copy-flags.mjs, scripts/build-images.mjs
+# generated on every build: scripts/copy-flags.mjs, scripts/build-images.mjs,
+# scripts/pack-sequence.mjs
 /public/flags/
 /public/_img/
+/public/sequence/packs/
 
 # Amplify deployment bundle, made by scripts/package-amplify.mjs
 /.amplify-hosting/

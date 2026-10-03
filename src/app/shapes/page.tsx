@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { ShapeGlyph } from "@/components/shape-glyph";
 import { JsonLd } from "@/components/json-ld";
 import { SHAPES } from "@/lib/shapes";

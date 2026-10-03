@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { RingSizer } from "@/components/ring-sizer";
 import { CHART_SIZES, formatUs } from "@/lib/ring-sizes";
 

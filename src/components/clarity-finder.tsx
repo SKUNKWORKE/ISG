@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/intent-link";
 import { useId, useState } from "react";
 import { STOCKED_CLARITIES, clarityCatalogueHref, clarityEnquiryHref } from "@/lib/clarity-grades";
 import { SHAPES, SHAPE_BY_SLUG, type ShapeSlug } from "@/lib/shapes";

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { m } from "framer-motion";
 import { JewelryGrid } from "./jewelry-grid";
+import { CATALOG_PENDING_ATTRIBUTE } from "./catalog-address-script";
 import {
   ActiveFilters,
   ChipSet,
@@ -47,7 +48,11 @@ export function JewelryCatalog({
   notice,
 }: {
   items: JewelSummary[];
-  /** The page's query string, e.g. `type=ring`; filters and sort round-trip through it. */
+  /**
+   * The query the server rendered, e.g. `type=ring`; empty on the prerendered
+   * page. Filters and sort round-trip through the address bar, whose own query
+   * is applied once the page is in the browser.
+   */
   initialQuery?: string;
   notice?: string;
 }) {
@@ -58,6 +63,22 @@ export function JewelryCatalog({
   const [filters, setFilters] = useState<JewelryFilters>(initial.filters);
   const [sort, setSortState] = useState<Sort>(initial.sort);
   const [visible, setVisible] = useState(PAGE);
+
+  // The page is prerendered without filters so the CDN can serve it whole; a
+  // filtered address is applied here, once in the browser. Filtering runs
+  // locally, so its results are on screen in the same pass and the pre-paint
+  // dimming can go at once.
+  const [addressRead, setAddressRead] = useState(false);
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search);
+    if (wanted.toString() !== initialQuery) {
+      const next = jewelryFiltersFromParams(wanted, bounds);
+      setFilters(next.filters);
+      setSortState(next.sort);
+    }
+    setAddressRead(true);
+    document.documentElement.removeAttribute(CATALOG_PENDING_ATTRIBUTE);
+  }, [bounds, initialQuery]);
 
   const update = useCallback((change: (prev: JewelryFilters) => JewelryFilters) => {
     setFilters(change);
@@ -96,11 +117,12 @@ export function JewelryCatalog({
 
   // Keep the address bar in step so the current view can be bookmarked or shared.
   useEffect(() => {
+    if (!addressRead) return;
     const url = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
     if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
       window.history.replaceState(window.history.state, "", url);
     }
-  }, [query]);
+  }, [query, addressRead]);
 
   function remove(id: string) {
     const item = active.find((a) => a.id === id);
@@ -205,7 +227,7 @@ export function JewelryCatalog({
 
       <div>
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-hairline pb-5">
-          <p aria-live="polite" className="text-[15px]">
+          <p aria-live="polite" className="text-[15px]" data-catalog-results="">
             {results.length} {results.length === 1 ? "piece" : "pieces"}
             {results.length !== items.length ? (
               <span className="text-ink-muted"> of {items.length}</span>
@@ -215,6 +237,7 @@ export function JewelryCatalog({
           {results.length > 0 ? (
             <a
               href={sheetHref}
+              rel="nofollow"
               download
               className="text-[13px] text-ink-muted underline underline-offset-4 transition-colors duration-200 hover:text-ink"
             >
@@ -237,6 +260,7 @@ export function JewelryCatalog({
         ) : (
           <m.div
             key={signature}
+            data-catalog-results=""
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
